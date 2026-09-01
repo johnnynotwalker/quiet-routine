@@ -1,4 +1,5 @@
 import '@/lib/geofencing';
+import '@/lib/status-foreground';
 
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';

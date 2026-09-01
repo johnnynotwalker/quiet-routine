@@ -1,12 +1,15 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { buildStatusContent } from './status-content';
+import { syncStatusForegroundService } from './status-foreground';
 import { SilenceReason, SilenceState } from './types';
 
 export const STATUS_NOTIFICATION_ID = 'quietroutine-status';
 const STATUS_CHANNEL_ID = 'silence-status-persistent';
 
 let lastPostedStatus: { title: string; body: string } | null = null;
+let usingAndroidForegroundService = false;
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -23,33 +26,6 @@ Notifications.setNotificationHandler({
     };
   },
 });
-
-function buildSilenceMessage(reason: SilenceReason | null): string {
-  if (!reason) return 'Phone is silenced';
-  switch (reason.type) {
-    case 'zone':
-      return `Silenced in ${reason.zoneName}`;
-    case 'meeting':
-      return `Silenced for ${reason.title}`;
-    case 'manual':
-      return reason.label ? `Silenced — ${reason.label}` : 'Silenced — manual mode';
-  }
-}
-
-function buildStatusContent(state: SilenceState): { title: string; body: string } {
-  if (state.isSilenced) {
-    const detail = buildSilenceMessage(state.reason);
-    const body = state.until
-      ? `${detail} · until ${new Date(state.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-      : detail;
-    return { title: 'Phone is silenced', body };
-  }
-
-  return {
-    title: 'Phone is not silenced',
-    body: 'QuietRoutine is monitoring your zones and schedule.',
-  };
-}
 
 export async function ensureNotificationPermissions(): Promise<boolean> {
   const settings = await Notifications.getPermissionsAsync();
@@ -87,7 +63,7 @@ async function postStatusNotification(title: string, body: string): Promise<void
       subtitle: Platform.OS === 'ios' ? 'QuietRoutine · always on' : undefined,
       sticky: true,
       autoDismiss: false,
-      priority: Notifications.AndroidNotificationPriority.LOW,
+      priority: Notifications.AndroidNotificationPriority.MAX,
       data: { type: 'status', persistent: true },
       ...(Platform.OS === 'android' ? { channelId: STATUS_CHANNEL_ID } : {}),
       ...(Platform.OS === 'ios' ? { interruptionLevel: 'passive' as const } : {}),
@@ -118,6 +94,16 @@ export async function ensureStatusNotification(state: SilenceState): Promise<voi
   await setupNotificationChannel();
 
   const { title, body } = buildStatusContent(state);
+
+  if (Platform.OS === 'android') {
+    usingAndroidForegroundService = await syncStatusForegroundService(state);
+    if (usingAndroidForegroundService) {
+      await Notifications.dismissNotificationAsync(STATUS_NOTIFICATION_ID).catch(() => undefined);
+      lastPostedStatus = { title, body };
+      return;
+    }
+  }
+
   const visible = await isStatusNotificationVisible();
   const changed =
     !lastPostedStatus || lastPostedStatus.title !== title || lastPostedStatus.body !== body;
@@ -127,9 +113,12 @@ export async function ensureStatusNotification(state: SilenceState): Promise<voi
   }
 }
 
+export function usesPinnedForegroundService(): boolean {
+  return usingAndroidForegroundService;
+}
+
 export async function showSilenceNotification(reason: SilenceReason | null, until: string | null): Promise<void> {
-  const state = buildSilenceState(true, reason, until);
-  await ensureStatusNotification(state);
+  await ensureStatusNotification(buildSilenceState(true, reason, until));
 }
 
 export async function showNotSilencedNotification(): Promise<void> {

@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, Platform } from 'react-native';
 
 import Button from '@/components/Button';
 import Screen from '@/components/Screen';
@@ -32,8 +32,9 @@ export default function HomeScreen() {
         <View style={[styles.notice, { backgroundColor: palette.accent, borderColor: palette.border }]}>
           <Text style={styles.noticeTitle}>Status notification</Text>
           <Text style={[styles.meta, { color: palette.muted }]}>
-            A persistent notification stays in your notification shade and comes back if removed. On
-            Android it cannot be swiped away; on iPhone it reappears when you open the app.
+            {Platform.OS === 'android'
+              ? 'A pinned foreground-service notification shows silence mode and cannot be swiped away.'
+              : 'QuietRoutine re-posts the status notification if you remove it, but iPhone always allows clearing notifications.'}
           </Text>
         </View>
 

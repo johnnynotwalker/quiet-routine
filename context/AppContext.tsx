@@ -1,5 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { AppState } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 
 import PermissionsGate from '@/components/PermissionsGate';
 import { checkCurrentLocationZones, syncGeofencing } from '@/lib/geofencing';
@@ -93,6 +93,9 @@ async function evaluateScheduledSilence(data: AppData): Promise<AppData> {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<AppData>(DEFAULT_APP_DATA);
   const [loading, setLoading] = useState(true);
+  const silenceRef = useRef(data.silence);
+
+  silenceRef.current = data.silence;
 
   const refresh = useCallback(async () => {
     const loaded = await loadAppData();
@@ -144,6 +147,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       subscription.remove();
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+
+    const interval = setInterval(() => {
+      ensureStatusNotification(silenceRef.current).catch(console.error);
+    }, 3_000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const setZones = useCallback(async (zones: SilentZone[]) => {
     const next = await updateZones(zones);
