@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 
+import { supportsBackgroundLocation } from './platform';
 import { haversineDistanceMeters, isPointInPolygon } from './polygon';
 import { loadAppData, updateSilence } from './storage';
 import { applySilenceState, buildSilenceState } from './silence';
@@ -126,6 +127,10 @@ export async function requestLocationPermissions(): Promise<boolean> {
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (!foreground.granted) return false;
 
+  if (!supportsBackgroundLocation()) {
+    return true;
+  }
+
   const background = await Location.requestBackgroundPermissionsAsync();
   return background.granted;
 }
@@ -162,6 +167,12 @@ export async function syncGeofencing(zones: SilentZone[]): Promise<void> {
 
   const hasPermission = await requestLocationPermissions();
   if (!hasPermission) return;
+
+  if (!supportsBackgroundLocation()) {
+    if (geofenceRegistered) await Location.stopGeofencingAsync(GEOFENCE_TASK);
+    if (watchRegistered) await Location.stopLocationUpdatesAsync(LOCATION_WATCH_TASK);
+    return;
+  }
 
   if (geofenceZones.length > 0) {
     await Location.startGeofencingAsync(GEOFENCE_TASK, geofenceZones.map(toLocationRegion));

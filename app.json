@@ -11,6 +11,7 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "QuietRoutine uses your location to detect silent zones like your office or library.",
+        "NSLocationAlwaysUsageDescription": "QuietRoutine monitors silent zones in the background so your phone can stay quiet automatically.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "QuietRoutine monitors silent zones in the background so your phone can stay quiet automatically.",
         "NSCalendarsUsageDescription": "QuietRoutine reads your calendar to silence your phone during meetings and routines.",
         "NSCalendarsFullAccessUsageDescription": "QuietRoutine reads your calendar to silence your phone during meetings and routines.",

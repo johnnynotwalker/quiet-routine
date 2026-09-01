@@ -7,6 +7,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { describeCalendarAccess, requestCalendarPermissions } from '@/lib/calendar';
 import { requestLocationPermissions } from '@/lib/geofencing';
+import { isExpoGo } from '@/lib/platform';
 import { ensureNotificationPermissions } from '@/lib/silence';
 
 type Props = {
@@ -47,7 +48,9 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
   const steps = [
     {
       title: 'Location access',
-      body: 'QuietRoutine needs your location to detect silent zones — even small 1m areas around your desk or a drawn zone on the map.',
+      body: isExpoGo()
+        ? 'QuietRoutine needs your location while the app is open to show your position on the map and detect silent zones. Background location requires a full app build.'
+        : 'QuietRoutine needs your location to detect silent zones — even small 1m areas around your desk or a drawn zone on the map.',
       action: 'Allow location',
       onPress: requestLocation,
       granted: locationGranted,
