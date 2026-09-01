@@ -1,12 +1,19 @@
-import { SymbolView } from 'expo-symbols';
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { ComponentProps } from 'react';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 
+type IconName = ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ name, color }: { name: IconName; color: string }) {
+  return <Ionicons name={name} size={24} color={color} />;
+}
+
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme();
 
   return (
     <Tabs
@@ -22,48 +29,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <SymbolView name={{ ios: 'house.fill', android: 'home', web: 'home' }} tintColor={color} size={24} />
-          ),
+          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="zones"
         options={{
           title: 'Zones',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'mappin.and.ellipse', android: 'place', web: 'place' }}
-              tintColor={color}
-              size={24}
-            />
-          ),
+          tabBarIcon: ({ color }) => <TabIcon name="location" color={color} />,
         }}
       />
       <Tabs.Screen
         name="routines"
         options={{
           title: 'Routine',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'list.bullet.rectangle', android: 'list', web: 'list' }}
-              tintColor={color}
-              size={24}
-            />
-          ),
+          tabBarIcon: ({ color }) => <TabIcon name="list" color={color} />,
         }}
       />
       <Tabs.Screen
         name="schedule"
         options={{
           title: 'Schedule',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'calendar', android: 'calendar_today', web: 'calendar_today' }}
-              tintColor={color}
-              size={24}
-            />
-          ),
+          tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
         }}
       />
     </Tabs>

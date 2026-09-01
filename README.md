@@ -24,7 +24,7 @@ A mobile app that keeps your phone silenced in the right places and at the right
 
 ## Stack
 
-- [Expo](https://expo.dev) + [React Native](https://reactnative.dev)
+- [Expo SDK 54](https://expo.dev/changelog/sdk-54) + [React Native](https://reactnative.dev) (compatible with **App Store Expo Go**)
 - [react-native-maps](https://github.com/react-native-maps/react-native-maps) for the zone map
 - [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) for geofencing and GPS
 - [expo-calendar](https://docs.expo.dev/versions/latest/sdk/calendar/) for Google/device calendar
