@@ -30,10 +30,9 @@ export default function GlassCard({
         styles.inner,
         compact && styles.innerCompact,
         {
-          borderColor: highlighted ? 'rgba(56, 189, 248, 0.35)' : 'rgba(255, 255, 255, 0.5)',
-          backgroundColor: Platform.OS === 'android' ? palette.glass : 'rgba(255,255,255,0.35)',
+          borderColor: highlighted ? 'rgba(56, 189, 248, 0.55)' : palette.glassBorder,
+          backgroundColor: highlighted ? 'rgba(56, 189, 248, 0.1)' : palette.glassInner,
         },
-        highlighted && { backgroundColor: 'rgba(56, 189, 248, 0.08)' },
         contentStyle,
       ]}>
       {children}
@@ -43,14 +42,18 @@ export default function GlassCard({
   if (Platform.OS === 'ios') {
     return (
       <View style={[styles.shadow, style]}>
-        <BlurView intensity={85} tint="light" style={styles.blur}>
+        <BlurView intensity={50} tint="light" style={styles.blur}>
           {inner}
         </BlurView>
       </View>
     );
   }
 
-  return <View style={[styles.shadow, styles.fallback, { backgroundColor: palette.glass }, style]}>{inner}</View>;
+  return (
+    <View style={[styles.shadow, styles.fallback, { backgroundColor: palette.glass, borderColor: palette.glassBorder }, style]}>
+      {inner}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -65,6 +68,7 @@ const styles = StyleSheet.create({
   },
   fallback: {
     borderRadius: radius.xl,
+    borderWidth: 1,
   },
   inner: {
     padding: spacing.xxl,

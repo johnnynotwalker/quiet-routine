@@ -18,18 +18,18 @@ export const radius = {
 
 export const shadow = {
   card: {
-    shadowColor: 'rgba(15, 23, 42, 0.04)',
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: 'rgba(15, 23, 42, 0.14)',
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 1,
-    shadowRadius: 28,
-    elevation: 2,
+    shadowRadius: 20,
+    elevation: 4,
   },
   soft: {
-    shadowColor: 'rgba(15, 23, 42, 0.04)',
+    shadowColor: 'rgba(15, 23, 42, 0.1)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 1,
+    shadowRadius: 12,
+    elevation: 2,
   },
   glow: {
     shadowColor: 'rgba(56, 189, 248, 0.45)',

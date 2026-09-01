@@ -36,7 +36,7 @@ export default function FormField({
           styles.input,
           {
             color: palette.text,
-            backgroundColor: palette.glass,
+            backgroundColor: palette.glassInner,
             borderColor: palette.border,
           },
         ]}

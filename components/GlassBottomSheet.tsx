@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(148, 163, 184, 0.35)',
+    backgroundColor: 'rgba(100, 116, 139, 0.45)',
   },
   sheet: {
     borderTopLeftRadius: radius.xl + 4,

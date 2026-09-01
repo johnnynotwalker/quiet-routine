@@ -41,8 +41,8 @@ export default function Chip({ label, active = false, onPress, style }: Props) {
         styles.chip,
         animatedStyle,
         {
-          backgroundColor: active ? palette.tint : palette.glass,
-          borderColor: active ? palette.tint : palette.border,
+          backgroundColor: active ? palette.tint : palette.glassInner,
+          borderColor: active ? palette.tintDeep : palette.border,
         },
         style,
       ]}>

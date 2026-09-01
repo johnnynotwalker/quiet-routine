@@ -37,12 +37,12 @@ export default function Button({
       ? palette.tint
       : variant === 'danger'
         ? 'rgba(251, 113, 133, 0.15)'
-        : palette.glass;
+        : palette.glassInner;
 
   const textColor =
     variant === 'primary' ? '#FFFFFF' : variant === 'danger' ? palette.danger : palette.text;
   const borderColor =
-    variant === 'primary' ? palette.tint : variant === 'danger' ? 'rgba(251, 113, 133, 0.35)' : palette.border;
+    variant === 'primary' ? palette.tintDeep : variant === 'danger' ? 'rgba(251, 113, 133, 0.35)' : palette.border;
 
   return (
     <AnimatedPressable

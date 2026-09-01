@@ -36,8 +36,8 @@ export default function Screen({
   return (
     <View style={styles.root}>
       <LinearGradient
-        colors={['#FFFFFF', '#F0F9FF', '#E0F2FE', '#F8FCFF']}
-        locations={[0, 0.35, 0.7, 1]}
+        colors={['#93C5FD', '#BFDBFE', '#DBEAFE', '#EFF6FF']}
+        locations={[0, 0.3, 0.65, 1]}
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>

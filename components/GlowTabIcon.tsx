@@ -33,7 +33,7 @@ export function HeaderIconButton({ name, onPress }: { name: IconName; onPress?: 
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.55)', borderColor: palette.border }]}>
+      style={[styles.iconBtn, { backgroundColor: palette.glass, borderColor: palette.glassBorder }]}>
       <Ionicons name={name} size={20} color={palette.text} />
     </Pressable>
   );

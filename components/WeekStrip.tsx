@@ -56,8 +56,8 @@ function DayPill({
       <View
         style={[
           styles.pill,
-          selected && { backgroundColor: palette.tint, borderColor: palette.tint },
-          !selected && { borderColor: 'rgba(255,255,255,0.65)', backgroundColor: 'rgba(255,255,255,0.5)' },
+          selected && { backgroundColor: palette.tint, borderColor: palette.tintDeep },
+          !selected && { borderColor: palette.border, backgroundColor: palette.glass },
         ]}>
         <Text style={[styles.weekday, { color: selected ? '#FFFFFF' : palette.muted }]}>{day.weekday}</Text>
         <Text style={[styles.dayNum, { color: selected ? '#FFFFFF' : palette.text }]}>{day.day}</Text>

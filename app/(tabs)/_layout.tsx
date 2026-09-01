@@ -31,14 +31,14 @@ export default function TabLayout() {
           borderRadius: radius.pill,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.55)',
-          backgroundColor: Platform.OS === 'ios' ? 'transparent' : palette.glass,
+          borderColor: palette.glassBorder,
+          backgroundColor: palette.glass,
           ...shadow.card,
           overflow: 'hidden',
         },
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
-            <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
         headerShown: useClientOnlyValue(false, true),
       }}>
