@@ -42,14 +42,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="routines"
         options={{
-          title: 'Routine',
-          tabBarIcon: ({ color }) => <TabIcon name="list" color={color} />,
+          href: null,
         }}
       />
       <Tabs.Screen
         name="schedule"
         options={{
-          title: 'Schedule',
+          title: 'Calendar',
           tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
         }}
       />

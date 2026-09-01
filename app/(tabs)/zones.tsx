@@ -73,7 +73,7 @@ export default function ZonesScreen() {
   return (
     <Screen
       title="Silent zones"
-      subtitle="Use the live map to draw a zone or pick a radius from your location.">
+      subtitle="Use the live map to draw a zone or set any radius from your location.">
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={styles.cardTitle}>Zone type</Text>

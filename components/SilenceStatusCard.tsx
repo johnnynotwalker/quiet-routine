@@ -14,14 +14,16 @@ export default function SilenceStatusCard({ silence }: Props) {
   const palette = Colors[colorScheme];
 
   const reasonLabel = (() => {
-    if (!silence.isSilenced || !silence.reason) return 'Your phone notifications are active';
+    if (!silence.isSilenced || !silence.reason) {
+      return 'QuietRoutine is monitoring zones and your calendar';
+    }
     switch (silence.reason.type) {
       case 'zone':
-        return `Silenced in ${silence.reason.zoneName}`;
+        return `Should be silent in ${silence.reason.zoneName}`;
       case 'meeting':
-        return `Silenced for ${silence.reason.title}`;
+        return `Should be silent for ${silence.reason.title}`;
       case 'manual':
-        return silence.reason.label ?? 'Manual silence is on';
+        return silence.reason.label ?? 'Reminder mode — switch to silent yourself';
     }
   })();
 
@@ -41,9 +43,14 @@ export default function SilenceStatusCard({ silence }: Props) {
             { backgroundColor: silence.isSilenced ? palette.tint : palette.success },
           ]}
         />
-        <Text style={styles.title}>{silence.isSilenced ? 'Phone is silenced' : 'Phone is not silenced'}</Text>
+        <Text style={styles.title}>
+          {silence.isSilenced ? 'Silence mode active' : 'Not in silence mode'}
+        </Text>
       </View>
       <Text style={[styles.subtitle, { color: palette.muted }]}>{reasonLabel}</Text>
+      <Text style={[styles.note, { color: palette.muted }]}>
+        QuietRoutine tracks when you should be quiet. In Expo Go it cannot flip the physical ringer switch.
+      </Text>
       {silence.until ? (
         <Text style={[styles.until, { color: palette.muted }]}>
           Until {new Date(silence.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
@@ -80,5 +87,10 @@ const styles = StyleSheet.create({
   },
   until: {
     fontSize: 14,
+  },
+  note: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
   },
 });

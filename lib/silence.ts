@@ -6,13 +6,17 @@ import { SilenceReason, SilenceState } from './types';
 export const STATUS_NOTIFICATION_ID = 'quietroutine-status';
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    const isAlarm = notification.request.content.data?.type === 'alarm';
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: isAlarm,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 function buildSilenceMessage(reason: SilenceReason | null): string {

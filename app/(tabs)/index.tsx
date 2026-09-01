@@ -2,104 +2,80 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import Button from '@/components/Button';
 import Screen from '@/components/Screen';
+import SilenceLimitationsCard from '@/components/SilenceLimitationsCard';
 import SilenceStatusCard from '@/components/SilenceStatusCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useApp } from '@/context/AppContext';
 import { getActiveMeeting, getEffectiveEndTime } from '@/lib/schedule';
-import { formatMinutes } from '@/lib/time';
+import { todayIsoDate } from '@/lib/time';
 
 export default function HomeScreen() {
   const { data, toggleManualSilence } = useApp();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
-  const totalRoutineMinutes = data.routines.reduce((sum, item) => sum + item.durationMinutes, 0);
   const activeMeeting = getActiveMeeting(data.schedule);
-  const sortedRoutines = [...data.routines].sort((a, b) => a.order - b.order);
-
-  let cursor = 8 * 60;
+  const today = todayIsoDate();
+  const todayEvents = data.schedule
+    .filter((item) => item.enabled && item.date === today)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   return (
-    <Screen
-      title="QuietRoutine"
-      subtitle="Automatic silence by location, calendar, and schedule.">
+    <Screen title="QuietRoutine" subtitle="Silence by location and calendar — with loud event alarms.">
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SilenceStatusCard silence={data.silence} />
 
+        <SilenceLimitationsCard />
+
         <View style={[styles.notice, { backgroundColor: palette.accent, borderColor: palette.border }]}>
-          <Text style={styles.noticeTitle}>Always-on status</Text>
+          <Text style={styles.noticeTitle}>Status notification</Text>
           <Text style={[styles.meta, { color: palette.muted }]}>
-            A persistent notification shows &quot;Phone is silenced&quot; or &quot;Phone is not silenced&quot; on
-            your lock screen and notification shade.
+            A persistent notification shows whether you should be in silence mode right now.
           </Text>
         </View>
 
         <Button
-          title={data.silence.reason?.type === 'manual' ? 'Turn off manual silence' : 'Silence now'}
+          title={data.silence.reason?.type === 'manual' ? 'Turn off reminder mode' : 'Mark as should be silent'}
           onPress={toggleManualSilence}
           variant={data.silence.reason?.type === 'manual' ? 'secondary' : 'primary'}
         />
 
         <View style={[styles.section, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.sectionTitle}>Today at a glance</Text>
+          <Text style={styles.sectionTitle}>Today on your calendar</Text>
           <Text style={[styles.meta, { color: palette.muted }]}>
             {data.zones.filter((zone) => zone.enabled).length} silent zones ·{' '}
-            {data.schedule.filter((item) => item.enabled).length} scheduled events ·{' '}
-            {formatMinutes(totalRoutineMinutes)} of routines
+            {data.schedule.filter((item) => item.enabled).length} scheduled events
           </Text>
           {activeMeeting ? (
             <Text style={[styles.highlight, { color: palette.tint }]}>
-              Event active: {activeMeeting.title} until {getEffectiveEndTime(activeMeeting)}
+              Active now: {activeMeeting.title} until {getEffectiveEndTime(activeMeeting)}
             </Text>
           ) : (
-            <Text style={[styles.meta, { color: palette.muted }]}>No scheduled silence active right now</Text>
+            <Text style={[styles.meta, { color: palette.muted }]}>No active silence window right now</Text>
           )}
-        </View>
-
-        <View style={[styles.section, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.sectionTitle}>Routine timeline</Text>
-          {sortedRoutines.length === 0 ? (
-            <Text style={[styles.meta, { color: palette.muted }]}>
-              Add routines to plan your day and see how long each block takes.
-            </Text>
+          {todayEvents.length > 0 ? (
+            todayEvents.map((event) => (
+              <View key={event.id} style={[styles.eventRow, { borderColor: palette.border }]}>
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                <Text style={[styles.meta, { color: palette.muted }]}>
+                  {event.startTime} – {getEffectiveEndTime(event)}
+                  {event.reminderMinutes > 0 ? ` · alarm ${event.reminderMinutes}m before` : ''}
+                </Text>
+              </View>
+            ))
           ) : (
-            sortedRoutines.map((routine) => {
-              const startHour = Math.floor(cursor / 60);
-              const startMinute = cursor % 60;
-              const startLabel = `${`${startHour}`.padStart(2, '0')}:${`${startMinute}`.padStart(2, '0')}`;
-              cursor += routine.durationMinutes;
-              const endHour = Math.floor(cursor / 60);
-              const endMinute = cursor % 60;
-              const endLabel = `${`${endHour}`.padStart(2, '0')}:${`${endMinute}`.padStart(2, '0')}`;
-              const linkedZone = data.zones.find((zone) => zone.id === routine.zoneId);
-
-              return (
-                <View key={routine.id} style={[styles.timelineRow, { borderColor: palette.border }]}>
-                  <View>
-                    <Text style={styles.itemTitle}>{routine.name}</Text>
-                    <Text style={[styles.meta, { color: palette.muted }]}>
-                      {startLabel} – {endLabel} · {formatMinutes(routine.durationMinutes)}
-                    </Text>
-                    {linkedZone ? (
-                      <Text style={[styles.meta, { color: palette.tint }]}>
-                        Auto-silence in {linkedZone.name}
-                      </Text>
-                    ) : null}
-                  </View>
-                </View>
-              );
-            })
+            <Text style={[styles.meta, { color: palette.muted }]}>No events today — open Calendar to add one.</Text>
           )}
         </View>
 
         <View style={[styles.section, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={styles.sectionTitle}>How it works</Text>
           <Text style={[styles.meta, { color: palette.muted }]}>
-            Draw a zone on the map or pick a 1m, 10m, or 100m radius. Import Google Calendar events or
-            add your own with reminders. QuietRoutine silences automatically and keeps a status
-            notification visible at all times.
+            Draw a zone on the map with a custom radius, or import Google Calendar events. Before each event,
+            QuietRoutine fires a loud alarm reminder. For real automatic ringer control, install a production build
+            (Expo Go cannot change iOS silent mode).
           </Text>
         </View>
       </ScrollView>
@@ -140,13 +116,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  timelineRow: {
+  eventRow: {
     borderTopWidth: 1,
-    paddingTop: 12,
-    marginTop: 4,
+    paddingTop: 10,
+    gap: 2,
   },
-  itemTitle: {
-    fontSize: 16,
+  eventTitle: {
+    fontSize: 15,
     fontWeight: '600',
   },
 });

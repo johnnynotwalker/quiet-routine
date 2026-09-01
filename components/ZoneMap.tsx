@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import MapView, { Circle, Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
 import { Text } from '@/components/Themed';
@@ -137,6 +137,27 @@ export default function ZoneMap({
               />
             ))}
           </View>
+          <View style={styles.customRow}>
+            <Text style={[styles.customLabel, { color: palette.muted }]}>Custom</Text>
+            <TextInput
+              style={[
+                styles.customInput,
+                { borderColor: palette.border, color: palette.text, backgroundColor: palette.background },
+              ]}
+              keyboardType="numeric"
+              placeholder="e.g. 25"
+              placeholderTextColor={palette.muted}
+              value={RADIUS_PRESETS.includes(radius as (typeof RADIUS_PRESETS)[number]) ? '' : String(radius)}
+              onChangeText={(text) => {
+                const parsed = Number(text.replace(/[^0-9]/g, ''));
+                if (!text.trim()) return;
+                if (Number.isFinite(parsed) && parsed > 0) {
+                  onRadiusChange(Math.min(parsed, 10_000));
+                }
+              }}
+            />
+            <Text style={[styles.customLabel, { color: palette.muted }]}>meters</Text>
+          </View>
           <Text style={[styles.hint, { color: palette.muted }]}>
             Tap the map to move the center. Your live location updates the zone automatically.
           </Text>
@@ -214,6 +235,25 @@ const styles = StyleSheet.create({
   presets: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
+  },
+  customRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  customLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  customInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 72,
+    fontSize: 15,
+    fontWeight: '600',
   },
   chip: {
     borderWidth: 1,

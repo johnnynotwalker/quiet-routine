@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import Button from '@/components/Button';
 import FormField from '@/components/FormField';
+import MiniCalendar from '@/components/MiniCalendar';
 import Screen from '@/components/Screen';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
@@ -15,6 +16,7 @@ import {
   fetchUpcomingCalendarEvents,
   requestCalendarPermissions,
 } from '@/lib/calendar';
+import { parseIsoDate, todayParts } from '@/lib/calendar-ui';
 import { getEffectiveEndTime } from '@/lib/schedule';
 import { createId, formatDurationBetween, todayIsoDate } from '@/lib/time';
 import { ScheduledSilence } from '@/lib/types';
@@ -26,8 +28,12 @@ export default function ScheduleScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
+  const initial = todayParts();
+  const [year, setYear] = useState(initial.year);
+  const [month, setMonth] = useState(initial.month);
+  const [selectedDate, setSelectedDate] = useState(todayIsoDate());
+
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState(todayIsoDate());
   const [startTime, setStartTime] = useState('11:00');
   const [endTime, setEndTime] = useState('12:00');
   const [useCalendarEnd, setUseCalendarEnd] = useState(true);
@@ -36,6 +42,24 @@ export default function ScheduleScreen() {
   const [customReminder, setCustomReminder] = useState('');
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventPreview[]>([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showGoogleImport, setShowGoogleImport] = useState(false);
+
+  const markedDates = useMemo(() => {
+    const dates = new Set<string>();
+    for (const item of data.schedule) {
+      if (item.date) dates.add(item.date);
+    }
+    return dates;
+  }, [data.schedule]);
+
+  const eventsForSelectedDay = useMemo(
+    () =>
+      data.schedule
+        .filter((item) => item.date === selectedDate)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [data.schedule, selectedDate]
+  );
 
   const loadCalendarEvents = async () => {
     setLoadingCalendar(true);
@@ -55,14 +79,21 @@ export default function ScheduleScreen() {
     loadCalendarEvents().catch(console.error);
   }, []);
 
+  const handleSelectDate = (iso: string) => {
+    setSelectedDate(iso);
+    const parts = parseIsoDate(iso);
+    setYear(parts.year);
+    setMonth(parts.month);
+  };
+
+  const handleMonthChange = (nextYear: number, nextMonth: number) => {
+    setYear(nextYear);
+    setMonth(nextMonth);
+  };
+
   const addMeeting = async () => {
     if (!title.trim()) {
       Alert.alert('Missing title', 'Name this event or focus block.');
-      return;
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('Invalid date', 'Use YYYY-MM-DD format.');
       return;
     }
 
@@ -83,7 +114,7 @@ export default function ScheduleScreen() {
       title: title.trim(),
       startTime,
       endTime,
-      date,
+      date: selectedDate,
       enabled: true,
       useCalendarEnd,
       customEndTime: useCalendarEnd ? undefined : customEndTime,
@@ -93,24 +124,25 @@ export default function ScheduleScreen() {
 
     await setSchedule([...data.schedule, meeting]);
     setTitle('');
-    setDate(todayIsoDate());
     setStartTime('11:00');
     setEndTime('12:00');
     setUseCalendarEnd(true);
     setCustomEndTime('12:30');
     setCustomReminder('');
     setReminderMinutes(30);
+    setShowAddForm(false);
   };
 
   const importCalendarEvent = async (event: CalendarEventPreview) => {
     const alreadyImported = data.schedule.some((item) => item.externalId === event.externalId);
     if (alreadyImported) {
-      Alert.alert('Already added', 'This calendar event is already in your silence schedule.');
+      Alert.alert('Already added', 'This calendar event is already in your schedule.');
       return;
     }
 
     const meeting = calendarEventToScheduledSilence(event, data.settings.defaultReminderMinutes);
     await setSchedule([...data.schedule, meeting]);
+    if (meeting.date) handleSelectDate(meeting.date);
   };
 
   const toggleMeeting = async (meetingId: string, enabled: boolean) => {
@@ -123,162 +155,182 @@ export default function ScheduleScreen() {
     await setSchedule(data.schedule.filter((meeting) => meeting.id !== meetingId));
   };
 
+  const selectedLabel = new Date(
+    parseIsoDate(selectedDate).year,
+    parseIsoDate(selectedDate).month - 1,
+    parseIsoDate(selectedDate).day
+  ).toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
     <Screen
-      title="Schedule"
-      subtitle="Built-in calendar events and Google Calendar routines that silence your phone automatically.">
+      title="Calendar"
+      subtitle="Mini calendar with event alarms and optional Google Calendar import.">
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <MiniCalendar
+          year={year}
+          month={month}
+          selectedDate={selectedDate}
+          markedDates={markedDates}
+          onMonthChange={handleMonthChange}
+          onSelectDate={handleSelectDate}
+        />
+
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.cardTitle}>Google Calendar</Text>
-          <Text style={[styles.helper, { color: palette.muted }]}>{describeCalendarAccess()}</Text>
-          <Button
-            title={loadingCalendar ? 'Loading events...' : 'Refresh calendar events'}
-            variant="secondary"
-            onPress={loadCalendarEvents}
-          />
-          {calendarEvents.length === 0 ? (
+          <View style={styles.row}>
+            <Text style={styles.cardTitle}>{selectedLabel}</Text>
+            <Button title={showAddForm ? 'Cancel' : 'Add event'} onPress={() => setShowAddForm((v) => !v)} />
+          </View>
+
+          {eventsForSelectedDay.length === 0 ? (
             <Text style={[styles.helper, { color: palette.muted }]}>
-              No upcoming events found. You can still use the built-in calendar below.
+              No events on this day. Tap Add event to schedule silence and an alarm reminder.
             </Text>
           ) : (
-            calendarEvents.slice(0, 8).map((event) => (
-              <View key={event.externalId} style={[styles.importRow, { borderColor: palette.border }]}>
-                <View style={styles.textBlock}>
-                  <Text style={styles.itemTitle}>{event.title}</Text>
-                  <Text style={[styles.meta, { color: palette.muted }]}>
-                    {event.startDate.toLocaleString([], {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}{' '}
-                    · {event.calendarTitle}
-                  </Text>
-                </View>
-                <Button title="Silence" onPress={() => importCalendarEvent(event)} />
-              </View>
-            ))
-          )}
-        </View>
-
-        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.cardTitle}>Built-in calendar</Text>
-          <Text style={[styles.helper, { color: palette.muted }]}>
-            Set start and end times. QuietRoutine reminds you before the event and silences automatically.
-          </Text>
-          <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Team sync, class, focus..." />
-          <FormField
-            label="Date (YYYY-MM-DD)"
-            value={date}
-            onChangeText={setDate}
-            keyboardType="numbers-and-punctuation"
-            placeholder={todayIsoDate()}
-          />
-          <FormField
-            label="Starts (HH:MM)"
-            value={startTime}
-            onChangeText={setStartTime}
-            keyboardType="numbers-and-punctuation"
-            placeholder="11:00"
-          />
-          <FormField
-            label="Calendar end (HH:MM)"
-            value={endTime}
-            onChangeText={setEndTime}
-            keyboardType="numbers-and-punctuation"
-            placeholder="12:00"
-          />
-
-          <View style={styles.switchRow}>
-            <View style={styles.textBlock}>
-              <Text style={styles.switchLabel}>Use calendar end time</Text>
-              <Text style={[styles.meta, { color: palette.muted }]}>
-                Turn off to set a custom silence end time.
-              </Text>
-            </View>
-            <Switch value={useCalendarEnd} onValueChange={setUseCalendarEnd} />
-          </View>
-
-          {!useCalendarEnd ? (
-            <FormField
-              label="Custom silence ends (HH:MM)"
-              value={customEndTime}
-              onChangeText={setCustomEndTime}
-              keyboardType="numbers-and-punctuation"
-              placeholder="12:30"
-            />
-          ) : null}
-
-          <Text style={[styles.label, { color: palette.muted }]}>Reminder before event</Text>
-          <View style={styles.chipRow}>
-            {REMINDER_PRESETS.map((preset) => (
-              <Pressable
-                key={preset}
-                onPress={() => {
-                  setReminderMinutes(preset);
-                  setCustomReminder('');
-                }}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor:
-                      reminderMinutes === preset && !customReminder ? palette.tint : palette.card,
-                    borderColor: palette.border,
-                  },
-                ]}>
-                <Text
-                  style={{
-                    color: reminderMinutes === preset && !customReminder ? '#FFF' : palette.text,
-                    fontWeight: '600',
-                    fontSize: 13,
-                  }}>
-                  {preset === 0 ? 'Off' : `${preset}m`}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <FormField
-            label="Custom reminder (minutes before)"
-            value={customReminder}
-            onChangeText={setCustomReminder}
-            keyboardType="numeric"
-            placeholder="45"
-          />
-
-          <Button title="Save event" onPress={addMeeting} />
-        </View>
-
-        {data.schedule.length === 0 ? (
-          <Text style={[styles.empty, { color: palette.muted }]}>
-            No scheduled silence yet. Import from Google Calendar or add your own events.
-          </Text>
-        ) : (
-          data.schedule.map((meeting) => {
-            const effectiveEnd = getEffectiveEndTime(meeting);
-            return (
-              <View
-                key={meeting.id}
-                style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-                <View style={styles.row}>
+            eventsForSelectedDay.map((meeting) => {
+              const effectiveEnd = getEffectiveEndTime(meeting);
+              return (
+                <View key={meeting.id} style={[styles.eventRow, { borderColor: palette.border }]}>
                   <View style={styles.textBlock}>
                     <Text style={styles.itemTitle}>{meeting.title}</Text>
                     <Text style={[styles.meta, { color: palette.muted }]}>
-                      {meeting.date ?? 'Daily'} · {meeting.startTime} – {effectiveEnd}
+                      {meeting.startTime} – {effectiveEnd}
                       {!meeting.useCalendarEnd ? ' (custom end)' : ''}
                     </Text>
                     <Text style={[styles.meta, { color: palette.muted }]}>
-                      {formatDurationBetween(meeting.startTime, effectiveEnd)} silenced · reminder{' '}
+                      {formatDurationBetween(meeting.startTime, effectiveEnd)} · alarm{' '}
                       {meeting.reminderMinutes > 0 ? `${meeting.reminderMinutes}m before` : 'off'}
-                      {meeting.source === 'google' ? ' · Google Calendar' : ''}
+                      {meeting.source === 'google' ? ' · Google' : ''}
                     </Text>
                   </View>
                   <Switch value={meeting.enabled} onValueChange={(value) => toggleMeeting(meeting.id, value)} />
+                  <Button title="Remove" variant="danger" onPress={() => removeMeeting(meeting.id)} />
                 </View>
-                <Button title="Remove" variant="danger" onPress={() => removeMeeting(meeting.id)} />
+              );
+            })
+          )}
+        </View>
+
+        {showAddForm ? (
+          <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+            <Text style={styles.cardTitle}>New event on {selectedDate}</Text>
+            <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Class, meeting, focus..." />
+            <FormField
+              label="Starts (HH:MM)"
+              value={startTime}
+              onChangeText={setStartTime}
+              keyboardType="numbers-and-punctuation"
+              placeholder="11:00"
+            />
+            <FormField
+              label="Ends (HH:MM)"
+              value={endTime}
+              onChangeText={setEndTime}
+              keyboardType="numbers-and-punctuation"
+              placeholder="12:00"
+            />
+
+            <View style={styles.switchRow}>
+              <View style={styles.textBlock}>
+                <Text style={styles.switchLabel}>Use event end time</Text>
+                <Text style={[styles.meta, { color: palette.muted }]}>Turn off to set a custom silence end.</Text>
               </View>
-            );
-          })
-        )}
+              <Switch value={useCalendarEnd} onValueChange={setUseCalendarEnd} />
+            </View>
+
+            {!useCalendarEnd ? (
+              <FormField
+                label="Custom silence ends (HH:MM)"
+                value={customEndTime}
+                onChangeText={setCustomEndTime}
+                keyboardType="numbers-and-punctuation"
+                placeholder="12:30"
+              />
+            ) : null}
+
+            <Text style={[styles.label, { color: palette.muted }]}>Alarm before event</Text>
+            <Text style={[styles.helper, { color: palette.muted }]}>
+              Plays a loud sound and vibrates — not just a quiet notification.
+            </Text>
+            <View style={styles.chipRow}>
+              {REMINDER_PRESETS.map((preset) => (
+                <Pressable
+                  key={preset}
+                  onPress={() => {
+                    setReminderMinutes(preset);
+                    setCustomReminder('');
+                  }}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor:
+                        reminderMinutes === preset && !customReminder ? palette.tint : palette.card,
+                      borderColor: palette.border,
+                    },
+                  ]}>
+                  <Text
+                    style={{
+                      color: reminderMinutes === preset && !customReminder ? '#FFF' : palette.text,
+                      fontWeight: '600',
+                      fontSize: 13,
+                    }}>
+                    {preset === 0 ? 'Off' : `${preset}m`}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <FormField
+              label="Custom alarm (minutes before)"
+              value={customReminder}
+              onChangeText={setCustomReminder}
+              keyboardType="numeric"
+              placeholder="45"
+            />
+
+            <Button title="Save event" onPress={addMeeting} />
+          </View>
+        ) : null}
+
+        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <Pressable onPress={() => setShowGoogleImport((v) => !v)} style={styles.row}>
+            <Text style={styles.cardTitle}>Google Calendar</Text>
+            <Text style={{ color: palette.tint, fontWeight: '600' }}>{showGoogleImport ? 'Hide' : 'Show'}</Text>
+          </Pressable>
+          {showGoogleImport ? (
+            <>
+              <Text style={[styles.helper, { color: palette.muted }]}>{describeCalendarAccess()}</Text>
+              <Button
+                title={loadingCalendar ? 'Loading events...' : 'Refresh calendar events'}
+                variant="secondary"
+                onPress={loadCalendarEvents}
+              />
+              {calendarEvents.length === 0 ? (
+                <Text style={[styles.helper, { color: palette.muted }]}>No upcoming events found.</Text>
+              ) : (
+                calendarEvents.slice(0, 10).map((event) => (
+                  <View key={event.externalId} style={[styles.importRow, { borderColor: palette.border }]}>
+                    <View style={styles.textBlock}>
+                      <Text style={styles.itemTitle}>{event.title}</Text>
+                      <Text style={[styles.meta, { color: palette.muted }]}>
+                        {event.startDate.toLocaleString([], {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                        })}{' '}
+                        · {event.calendarTitle}
+                      </Text>
+                    </View>
+                    <Button title="Add" onPress={() => importCalendarEvent(event)} />
+                  </View>
+                ))
+              )}
+            </>
+          ) : null}
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -298,6 +350,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
+    flex: 1,
   },
   helper: {
     fontSize: 14,
@@ -312,6 +365,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  eventRow: {
+    gap: 10,
+    borderTopWidth: 1,
+    paddingTop: 12,
   },
   importRow: {
     flexDirection: 'row',
@@ -353,9 +411,5 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  },
-  empty: {
-    fontSize: 15,
-    lineHeight: 22,
   },
 });
