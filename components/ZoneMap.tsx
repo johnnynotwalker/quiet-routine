@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import MapView, { Circle, Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getCurrentCoordinates, watchCurrentLocation } from '@/lib/geofencing';
-import { LatLng, RADIUS_PRESETS, RadiusPreset, ZoneShape } from '@/lib/types';
+import { LatLng, RADIUS_PRESETS, ZoneShape } from '@/lib/types';
 
 type Props = {
   shape: ZoneShape;
@@ -90,28 +85,6 @@ export default function ZoneMap({
   };
 
   const clearPolygon = () => onPolygonChange([]);
-
-  if (Platform.OS === 'web') {
-    return (
-      <View style={[styles.webFallback, { borderColor: palette.border, backgroundColor: palette.card }]}>
-        <Text style={styles.webTitle}>Map preview</Text>
-        <Text style={[styles.webBody, { color: palette.muted }]}>
-          Live map and zone drawing work on a real device with Expo Go. Use radius presets below and save your zone.
-        </Text>
-        <View style={styles.presets}>
-          {RADIUS_PRESETS.map((preset) => (
-            <PresetChip
-              key={preset}
-              label={`${preset}m`}
-              active={radius === preset}
-              onPress={() => onRadiusChange(preset)}
-              palette={palette}
-            />
-          ))}
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.wrapper}>
@@ -261,19 +234,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  },
-  webFallback: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-    gap: 10,
-  },
-  webTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  webBody: {
-    fontSize: 14,
-    lineHeight: 20,
   },
 });
