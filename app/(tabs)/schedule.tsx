@@ -19,7 +19,7 @@ import {
 } from '@/lib/calendar';
 import { parseIsoDate, todayParts } from '@/lib/calendar-ui';
 import { getEffectiveEndTime } from '@/lib/schedule';
-import { createId, formatDurationBetween, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
+import { createId, formatDurationBetween, formatTimeLabel, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
 import { ScheduledSilence } from '@/lib/types';
 
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
@@ -198,7 +198,7 @@ export default function ScheduleScreen() {
                   <View style={styles.textBlock}>
                     <Text style={styles.itemTitle}>{meeting.title}</Text>
                     <Text style={[styles.meta, { color: palette.muted }]}>
-                      {meeting.startTime} – {effectiveEnd}
+                      {formatTimeLabel(meeting.startTime)} – {formatTimeLabel(effectiveEnd)}
                       {!meeting.useCalendarEnd ? ' (custom end)' : ''}
                     </Text>
                     <Text style={[styles.meta, { color: palette.muted }]}>
