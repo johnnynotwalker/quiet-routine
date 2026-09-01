@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { Platform } from 'react-native';
 
 import { haversineDistanceMeters, isPointInPolygon } from './polygon';
 import { loadAppData, updateSilence } from './storage';
@@ -10,6 +11,7 @@ export const GEOFENCE_TASK = 'QUIETROUTINE_GEOFENCE';
 export const LOCATION_WATCH_TASK = 'QUIETROUTINE_LOCATION_WATCH';
 
 const NATIVE_GEOFENCE_MIN_RADIUS = 100;
+const isNative = Platform.OS !== 'web';
 
 function isInsideZone(zone: SilentZone, point: LatLng): boolean {
   if (zone.shape === 'polygon' && zone.polygon && zone.polygon.length >= 3) {
@@ -64,46 +66,48 @@ async function evaluateLocationAgainstZones(coords: LatLng): Promise<void> {
   }
 }
 
-TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
-  if (error) {
-    console.error('Geofence task error:', error);
-    return;
-  }
+if (isNative) {
+  TaskManager.defineTask(GEOFENCE_TASK, async ({ data, error }) => {
+    if (error) {
+      console.error('Geofence task error:', error);
+      return;
+    }
 
-  const event = data as {
-    eventType: Location.GeofencingEventType;
-    region: Location.LocationRegion;
-  };
+    const event = data as {
+      eventType: Location.GeofencingEventType;
+      region: Location.LocationRegion;
+    };
 
-  const appData = await loadAppData();
-  const zone = appData.zones.find((item) => item.id === event.region.identifier);
-  if (!zone || !zone.enabled) return;
+    const appData = await loadAppData();
+    const zone = appData.zones.find((item) => item.id === event.region.identifier);
+    if (!zone || !zone.enabled) return;
 
-  if (event.eventType === Location.GeofencingEventType.Enter) {
-    await applyZoneSilence(zone);
-    return;
-  }
+    if (event.eventType === Location.GeofencingEventType.Enter) {
+      await applyZoneSilence(zone);
+      return;
+    }
 
-  if (event.eventType === Location.GeofencingEventType.Exit) {
-    await clearZoneSilence(zone.id);
-  }
-});
-
-TaskManager.defineTask(LOCATION_WATCH_TASK, async ({ data, error }) => {
-  if (error) {
-    console.error('Location watch task error:', error);
-    return;
-  }
-
-  const locations = (data as { locations?: Location.LocationObject[] }).locations;
-  const latest = locations?.[locations.length - 1];
-  if (!latest) return;
-
-  await evaluateLocationAgainstZones({
-    latitude: latest.coords.latitude,
-    longitude: latest.coords.longitude,
+    if (event.eventType === Location.GeofencingEventType.Exit) {
+      await clearZoneSilence(zone.id);
+    }
   });
-});
+
+  TaskManager.defineTask(LOCATION_WATCH_TASK, async ({ data, error }) => {
+    if (error) {
+      console.error('Location watch task error:', error);
+      return;
+    }
+
+    const locations = (data as { locations?: Location.LocationObject[] }).locations;
+    const latest = locations?.[locations.length - 1];
+    if (!latest) return;
+
+    await evaluateLocationAgainstZones({
+      latitude: latest.coords.latitude,
+      longitude: latest.coords.longitude,
+    });
+  });
+}
 
 export function toLocationRegion(zone: SilentZone): Location.LocationRegion {
   return {
@@ -117,6 +121,8 @@ export function toLocationRegion(zone: SilentZone): Location.LocationRegion {
 }
 
 export async function requestLocationPermissions(): Promise<boolean> {
+  if (!isNative) return false;
+
   const foreground = await Location.requestForegroundPermissionsAsync();
   if (!foreground.granted) return false;
 
@@ -139,6 +145,8 @@ function geofenceEligibleZones(zones: SilentZone[]): SilentZone[] {
 }
 
 export async function syncGeofencing(zones: SilentZone[]): Promise<void> {
+  if (!isNative) return;
+
   const enabledZones = zones.filter((zone) => zone.enabled);
   const geofenceZones = geofenceEligibleZones(zones);
   const watchNeeded = needsLocationWatch(zones);
@@ -178,6 +186,8 @@ export async function syncGeofencing(zones: SilentZone[]): Promise<void> {
 }
 
 export async function getCurrentCoordinates(): Promise<Location.LocationObjectCoords | null> {
+  if (!isNative) return null;
+
   const permission = await Location.requestForegroundPermissionsAsync();
   if (!permission.granted) return null;
 
@@ -191,6 +201,8 @@ export async function getCurrentCoordinates(): Promise<Location.LocationObjectCo
 export async function watchCurrentLocation(
   onUpdate: (coords: Location.LocationObjectCoords) => void
 ): Promise<Location.LocationSubscription | null> {
+  if (!isNative) return null;
+
   const permission = await Location.requestForegroundPermissionsAsync();
   if (!permission.granted) return null;
 
@@ -205,6 +217,8 @@ export async function watchCurrentLocation(
 }
 
 export async function checkCurrentLocationZones(): Promise<void> {
+  if (!isNative) return;
+
   const coords = await getCurrentCoordinates();
   if (!coords) return;
 

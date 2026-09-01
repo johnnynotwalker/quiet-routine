@@ -18,6 +18,8 @@ function eventStartDate(meeting: ScheduledSilence): Date | null {
 }
 
 export async function syncEventReminders(schedule: ScheduledSilence[]): Promise<void> {
+  if (Platform.OS === 'web') return;
+
   const granted = await ensureNotificationPermissions();
   if (!granted) return;
 
