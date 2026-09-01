@@ -4,6 +4,7 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { isExpoGo } from '@/lib/platform';
+import { lockScreenSettingsHint } from '@/lib/notification-permissions';
 
 export default function SilenceLimitationsCard() {
   const colorScheme = useColorScheme();
@@ -18,21 +19,19 @@ export default function SilenceLimitationsCard() {
     Linking.openSettings();
   };
 
-  const notificationNote =
-    Platform.OS === 'ios'
-      ? 'On iPhone, Apple does not allow any app to pin a notification in Notification Center — you can always swipe it away. QuietRoutine re-posts it every few seconds while the app is running. A production build can use a Lock Screen Live Activity instead.'
-      : 'On Android, QuietRoutine uses a foreground service notification that cannot be swiped away while the app is monitoring (allow location when prompted).';
-
   return (
     <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-      <Text style={styles.title}>About status notifications</Text>
-      <Text style={[styles.body, { color: palette.muted }]}>{notificationNote}</Text>
+      <Text style={styles.title}>Lock screen vs. real silence</Text>
+      <Text style={[styles.body, { color: palette.muted }]}>
+        Lock screen status only needs notification permission — not location. If you do not see it on
+        your lock screen, {lockScreenSettingsHint()}
+      </Text>
       <Text style={[styles.body, { color: palette.muted }]}>
         {isExpoGo()
-          ? 'In Expo Go, QuietRoutine also cannot switch your iPhone to silent or Do Not Disturb — it tracks when you should be quiet and reminds you.'
+          ? 'Expo Go cannot flip the physical silent switch. QuietRoutine shows when you should be quiet and reminds you.'
           : Platform.OS === 'ios'
-            ? 'Apple does not let third-party apps turn off the ringer. Turn on Silent mode or a Focus yourself.'
-            : 'Full automatic ringer control needs a production app build with extra Android permissions.'}
+            ? 'Apple does not let apps mute the ringer. Use Silent mode or a Focus yourself.'
+            : 'Automatic ringer control needs a production build with extra permissions.'}
       </Text>
       <Pressable onPress={openFocusSettings}>
         <Text style={[styles.link, { color: palette.tint }]}>

@@ -1,6 +1,8 @@
-import { ScrollView, StyleSheet, View, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 
 import Button from '@/components/Button';
+import LockScreenStatusCard from '@/components/LockScreenStatusCard';
 import Screen from '@/components/Screen';
 import SilenceLimitationsCard from '@/components/SilenceLimitationsCard';
 import SilenceStatusCard from '@/components/SilenceStatusCard';
@@ -8,6 +10,11 @@ import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useApp } from '@/context/AppContext';
+import {
+  canShowOnLockScreen,
+  getStatusNotificationPermissions,
+  hasNotificationAccess,
+} from '@/lib/notification-permissions';
 import { getActiveMeeting, getEffectiveEndTime } from '@/lib/schedule';
 import { todayIsoDate } from '@/lib/time';
 
@@ -15,6 +22,24 @@ export default function HomeScreen() {
   const { data, toggleManualSilence } = useApp();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const [notificationsGranted, setNotificationsGranted] = useState(false);
+  const [lockScreenReady, setLockScreenReady] = useState(false);
+
+  const refreshPermissionState = async () => {
+    const settings = await getStatusNotificationPermissions();
+    setNotificationsGranted(hasNotificationAccess(settings));
+    setLockScreenReady(canShowOnLockScreen(settings));
+  };
+
+  useEffect(() => {
+    refreshPermissionState().catch(console.error);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        refreshPermissionState().catch(console.error);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const activeMeeting = getActiveMeeting(data.schedule);
   const today = todayIsoDate();
@@ -23,20 +48,16 @@ export default function HomeScreen() {
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   return (
-    <Screen title="QuietRoutine" subtitle="Silence by location and calendar — with loud event alarms.">
+    <Screen title="QuietRoutine" subtitle="Silence status on your lock screen — notification permission only.">
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <LockScreenStatusCard
+          lockScreenReady={lockScreenReady}
+          notificationsGranted={notificationsGranted}
+        />
+
         <SilenceStatusCard silence={data.silence} />
 
         <SilenceLimitationsCard />
-
-        <View style={[styles.notice, { backgroundColor: palette.accent, borderColor: palette.border }]}>
-          <Text style={styles.noticeTitle}>Status notification</Text>
-          <Text style={[styles.meta, { color: palette.muted }]}>
-            {Platform.OS === 'android'
-              ? 'A pinned foreground-service notification shows silence mode and cannot be swiped away.'
-              : 'QuietRoutine re-posts the status notification if you remove it, but iPhone always allows clearing notifications.'}
-          </Text>
-        </View>
 
         <Button
           title={data.silence.reason?.type === 'manual' ? 'Turn off reminder mode' : 'Mark as should be silent'}
@@ -75,9 +96,8 @@ export default function HomeScreen() {
         <View style={[styles.section, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={styles.sectionTitle}>How it works</Text>
           <Text style={[styles.meta, { color: palette.muted }]}>
-            Draw a zone on the map with a custom radius, or import Google Calendar events. Before each event,
-            QuietRoutine fires a loud alarm reminder. For real automatic ringer control, install a production build
-            (Expo Go cannot change iOS silent mode).
+            Allow notifications to see silence status on your lock screen. Zones and calendar are optional extras.
+            Event alarms play a loud sound before each scheduled block.
           </Text>
         </View>
       </ScrollView>
@@ -89,16 +109,6 @@ const styles = StyleSheet.create({
   content: {
     gap: 16,
     paddingBottom: 32,
-  },
-  notice: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 14,
-    gap: 6,
-  },
-  noticeTitle: {
-    fontSize: 15,
-    fontWeight: '700',
   },
   section: {
     borderWidth: 1,

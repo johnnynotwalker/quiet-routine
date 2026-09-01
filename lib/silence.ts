@@ -1,15 +1,19 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import {
+  canShowOnLockScreen,
+  getStatusNotificationPermissions,
+  hasNotificationAccess,
+  requestStatusNotificationPermissions,
+} from './notification-permissions';
 import { buildStatusContent } from './status-content';
-import { syncStatusForegroundService } from './status-foreground';
 import { SilenceReason, SilenceState } from './types';
 
 export const STATUS_NOTIFICATION_ID = 'quietroutine-status';
-const STATUS_CHANNEL_ID = 'silence-status-persistent';
+const STATUS_CHANNEL_ID = 'quietroutine-lock-screen';
 
 let lastPostedStatus: { title: string; body: string } | null = null;
-let usingAndroidForegroundService = false;
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -28,25 +32,27 @@ Notifications.setNotificationHandler({
 });
 
 export async function ensureNotificationPermissions(): Promise<boolean> {
-  const settings = await Notifications.getPermissionsAsync();
-  if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
+  const settings = await getStatusNotificationPermissions();
+  if (hasNotificationAccess(settings)) {
     return true;
   }
 
-  const requested = await Notifications.requestPermissionsAsync();
-  return (
-    requested.granted ||
-    requested.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
-  );
+  const requested = await requestStatusNotificationPermissions();
+  return hasNotificationAccess(requested);
+}
+
+export async function getLockScreenNotificationReady(): Promise<boolean> {
+  const settings = await getStatusNotificationPermissions();
+  return canShowOnLockScreen(settings);
 }
 
 export async function setupNotificationChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
   await Notifications.setNotificationChannelAsync(STATUS_CHANNEL_ID, {
-    name: 'Silence status (always on)',
-    description: 'Persistent status showing whether your phone should be silenced',
-    importance: Notifications.AndroidImportance.LOW,
+    name: 'Lock screen status',
+    description: 'Shows whether your phone should be silenced on the lock screen',
+    importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0],
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     bypassDnd: false,
@@ -60,13 +66,13 @@ async function postStatusNotification(title: string, body: string): Promise<void
     content: {
       title,
       body,
-      subtitle: Platform.OS === 'ios' ? 'QuietRoutine · always on' : undefined,
+      subtitle: Platform.OS === 'ios' ? 'QuietRoutine' : undefined,
       sticky: true,
       autoDismiss: false,
-      priority: Notifications.AndroidNotificationPriority.MAX,
+      priority: Notifications.AndroidNotificationPriority.HIGH,
       data: { type: 'status', persistent: true },
       ...(Platform.OS === 'android' ? { channelId: STATUS_CHANNEL_ID } : {}),
-      ...(Platform.OS === 'ios' ? { interruptionLevel: 'passive' as const } : {}),
+      ...(Platform.OS === 'ios' ? { interruptionLevel: 'active' as const } : {}),
     },
     trigger: null,
   });
@@ -94,16 +100,6 @@ export async function ensureStatusNotification(state: SilenceState): Promise<voi
   await setupNotificationChannel();
 
   const { title, body } = buildStatusContent(state);
-
-  if (Platform.OS === 'android') {
-    usingAndroidForegroundService = await syncStatusForegroundService(state);
-    if (usingAndroidForegroundService) {
-      await Notifications.dismissNotificationAsync(STATUS_NOTIFICATION_ID).catch(() => undefined);
-      lastPostedStatus = { title, body };
-      return;
-    }
-  }
-
   const visible = await isStatusNotificationVisible();
   const changed =
     !lastPostedStatus || lastPostedStatus.title !== title || lastPostedStatus.body !== body;
@@ -111,10 +107,6 @@ export async function ensureStatusNotification(state: SilenceState): Promise<voi
   if (!visible || changed) {
     await postStatusNotification(title, body);
   }
-}
-
-export function usesPinnedForegroundService(): boolean {
-  return usingAndroidForegroundService;
 }
 
 export async function showSilenceNotification(reason: SilenceReason | null, until: string | null): Promise<void> {

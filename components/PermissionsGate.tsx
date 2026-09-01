@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, View } from 'react-native';
 
 import Button from '@/components/Button';
@@ -8,7 +8,13 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { describeCalendarAccess, requestCalendarPermissions } from '@/lib/calendar';
 import { requestLocationPermissions } from '@/lib/geofencing';
 import { isExpoGo } from '@/lib/platform';
-import { ensureNotificationPermissions } from '@/lib/silence';
+import {
+  canShowOnLockScreen,
+  getStatusNotificationPermissions,
+  hasNotificationAccess,
+  requestStatusNotificationPermissions,
+} from '@/lib/notification-permissions';
+import { ensureStatusNotification, buildSilenceState } from '@/lib/silence';
 
 type Props = {
   visible: boolean;
@@ -19,19 +25,37 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const [step, setStep] = useState(0);
-  const [locationGranted, setLocationGranted] = useState(false);
   const [notificationGranted, setNotificationGranted] = useState(false);
+  const [lockScreenReady, setLockScreenReady] = useState(false);
+  const [locationGranted, setLocationGranted] = useState(false);
   const [calendarGranted, setCalendarGranted] = useState(false);
+
+  const refreshNotificationState = async () => {
+    const settings = await getStatusNotificationPermissions();
+    setNotificationGranted(hasNotificationAccess(settings));
+    setLockScreenReady(canShowOnLockScreen(settings));
+  };
+
+  useEffect(() => {
+    if (visible) {
+      refreshNotificationState().catch(console.error);
+    }
+  }, [visible]);
+
+  const requestNotifications = async () => {
+    await requestStatusNotificationPermissions();
+    await refreshNotificationState();
+    await ensureStatusNotification(buildSilenceState(false, null));
+    setStep(1);
+  };
 
   const requestLocation = async () => {
     const granted = await requestLocationPermissions();
     setLocationGranted(granted);
-    setStep(1);
+    setStep(2);
   };
 
-  const requestNotifications = async () => {
-    const granted = await ensureNotificationPermissions();
-    setNotificationGranted(granted);
+  const skipLocation = () => {
     setStep(2);
   };
 
@@ -47,20 +71,27 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
 
   const steps = [
     {
-      title: 'Location access',
+      title: 'Lock screen status',
       body: isExpoGo()
-        ? 'QuietRoutine needs your location while the app is open to show your position on the map and detect silent zones. Background location requires a full app build.'
-        : 'QuietRoutine needs your location to detect silent zones — even small 1m areas around your desk or a drawn zone on the map.',
+        ? 'Allow notifications so QuietRoutine can show "Phone is silenced" or "Phone is not silenced" on your lock screen. This only needs notification permission — not location. In Expo Go, also enable Lock Screen under Settings → Notifications → Expo Go.'
+        : 'Allow notifications so QuietRoutine can show your silence status on the lock screen and in the notification shade. Location is not required for this.',
+      action: 'Allow notifications',
+      onPress: requestNotifications,
+      granted: lockScreenReady,
+      grantedLabel: lockScreenReady ? 'Lock screen status ready' : notificationGranted ? 'Notifications on — enable Lock Screen in Settings' : undefined,
+      skip: notificationGranted ? 'Continue' : undefined,
+      onSkip: notificationGranted ? () => setStep(1) : undefined,
+    },
+    {
+      title: 'Location access (optional)',
+      body: isExpoGo()
+        ? 'Needed only for map zones while the app is open. You can skip this and still use calendar events and lock screen status.'
+        : 'Needed for silent zones on the map. You can skip and still use calendar + lock screen status.',
       action: 'Allow location',
       onPress: requestLocation,
       granted: locationGranted,
-    },
-    {
-      title: 'Status notifications',
-      body: 'A persistent notification stays in your notification shade and reappears if removed. On Android it cannot be swiped away.',
-      action: 'Allow notifications',
-      onPress: requestNotifications,
-      granted: notificationGranted,
+      skip: 'Skip location',
+      onSkip: skipLocation,
     },
     {
       title: 'Calendar access (optional)',
@@ -69,6 +100,7 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
       onPress: requestCalendar,
       granted: calendarGranted,
       skip: 'Use built-in calendar only',
+      onSkip: skipCalendar,
     },
   ];
 
@@ -82,19 +114,21 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
         <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
         <Text style={styles.brand}>QuietRoutine</Text>
         <Text style={[styles.tagline, { color: palette.muted }]}>
-          Silence your phone in the right places and at the right times — automatically.
+          See silence status on your lock screen — with just notification permission.
         </Text>
 
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={styles.stepLabel}>Step {step + 1} of {steps.length}</Text>
           <Text style={styles.title}>{current.title}</Text>
           <Text style={[styles.body, { color: palette.muted }]}>{current.body}</Text>
-          {current.granted ? (
+          {current.grantedLabel ? (
+            <Text style={[styles.granted, { color: palette.success }]}>{current.grantedLabel}</Text>
+          ) : current.granted ? (
             <Text style={[styles.granted, { color: palette.success }]}>Permission granted</Text>
           ) : null}
           <Button title={current.action} onPress={current.onPress} />
-          {current.skip ? (
-            <Button title={current.skip} variant="secondary" onPress={skipCalendar} />
+          {current.skip && current.onSkip ? (
+            <Button title={current.skip} variant="secondary" onPress={current.onSkip} />
           ) : null}
         </View>
 
