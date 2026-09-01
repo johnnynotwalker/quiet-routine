@@ -276,7 +276,7 @@ export default function ScheduleScreen() {
 
         <GlassCard contentStyle={styles.card}>
           <Pressable onPress={() => setShowGoogleImport((v) => !v)} style={styles.row}>
-            <Text style={styles.cardTitle}>Google Calendar</Text>
+            <Text style={[styles.cardTitle, { color: palette.text }]}>Google Calendar</Text>
             <Text style={{ color: palette.tint, fontWeight: '600' }}>{showGoogleImport ? 'Hide' : 'Show'}</Text>
           </Pressable>
           {showGoogleImport ? (
