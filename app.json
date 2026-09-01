@@ -15,7 +15,10 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "QuietRoutine monitors silent zones in the background so your phone can stay quiet automatically.",
         "NSCalendarsUsageDescription": "QuietRoutine reads your calendar to silence your phone during meetings and routines.",
         "NSCalendarsFullAccessUsageDescription": "QuietRoutine reads your calendar to silence your phone during meetings and routines.",
-        "UIBackgroundModes": ["location", "fetch"]
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -74,7 +77,8 @@
         {
           "calendarPermission": "QuietRoutine reads your calendar to auto-silence during events."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

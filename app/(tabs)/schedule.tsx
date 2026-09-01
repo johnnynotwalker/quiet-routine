@@ -5,6 +5,7 @@ import Button from '@/components/Button';
 import FormField from '@/components/FormField';
 import MiniCalendar from '@/components/MiniCalendar';
 import Screen from '@/components/Screen';
+import TimePickerField from '@/components/TimePickerField';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -18,7 +19,7 @@ import {
 } from '@/lib/calendar';
 import { parseIsoDate, todayParts } from '@/lib/calendar-ui';
 import { getEffectiveEndTime } from '@/lib/schedule';
-import { createId, formatDurationBetween, todayIsoDate } from '@/lib/time';
+import { createId, formatDurationBetween, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
 import { ScheduledSilence } from '@/lib/types';
 
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
@@ -97,13 +98,13 @@ export default function ScheduleScreen() {
       return;
     }
 
-    if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
-      Alert.alert('Invalid time', 'Use 24-hour format like 11:00 or 23:30.');
+    if (!useCalendarEnd && parseTimeToMinutes(customEndTime) <= parseTimeToMinutes(startTime)) {
+      Alert.alert('Invalid time range', 'Silence end must be after the start time.');
       return;
     }
 
-    if (!useCalendarEnd && !/^\d{2}:\d{2}$/.test(customEndTime)) {
-      Alert.alert('Invalid custom end', 'Custom end time must be HH:MM.');
+    if (parseTimeToMinutes(endTime) <= parseTimeToMinutes(startTime)) {
+      Alert.alert('Invalid time range', 'End time must be after start time.');
       return;
     }
 
@@ -218,20 +219,15 @@ export default function ScheduleScreen() {
           <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
             <Text style={styles.cardTitle}>New event on {selectedDate}</Text>
             <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Class, meeting, focus..." />
-            <FormField
-              label="Starts (HH:MM)"
-              value={startTime}
-              onChangeText={setStartTime}
-              keyboardType="numbers-and-punctuation"
-              placeholder="11:00"
-            />
-            <FormField
-              label="Ends (HH:MM)"
-              value={endTime}
-              onChangeText={setEndTime}
-              keyboardType="numbers-and-punctuation"
-              placeholder="12:00"
-            />
+
+            <Text style={[styles.label, { color: palette.muted }]}>Event time</Text>
+            <Text style={[styles.helper, { color: palette.muted }]}>
+              Use your phone&apos;s built-in time picker wheels.
+            </Text>
+            <View style={styles.timeColumn}>
+              <TimePickerField label="Starts" value={startTime} onChange={setStartTime} />
+              <TimePickerField label="Ends" value={endTime} onChange={setEndTime} />
+            </View>
 
             <View style={styles.switchRow}>
               <View style={styles.textBlock}>
@@ -242,13 +238,7 @@ export default function ScheduleScreen() {
             </View>
 
             {!useCalendarEnd ? (
-              <FormField
-                label="Custom silence ends (HH:MM)"
-                value={customEndTime}
-                onChangeText={setCustomEndTime}
-                keyboardType="numbers-and-punctuation"
-                placeholder="12:30"
-              />
+              <TimePickerField label="Silence ends" value={customEndTime} onChange={setCustomEndTime} />
             ) : null}
 
             <Text style={[styles.label, { color: palette.muted }]}>Alarm before event</Text>
@@ -411,5 +401,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  timeColumn: {
+    gap: 12,
   },
 });

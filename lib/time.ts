@@ -3,6 +3,24 @@ export function parseTimeToMinutes(time: string): number {
   return hours * 60 + minutes;
 }
 
+export function formatTimeString(date: Date): string {
+  const hours = `${date.getHours()}`.padStart(2, '0');
+  const minutes = `${date.getMinutes()}`.padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+export function dateFromTimeString(time: string, baseDate = new Date()): Date {
+  const [hours, minutes] = time.split(':').map(Number);
+  const date = new Date(baseDate);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+export function formatTimeLabel(time: string): string {
+  const date = dateFromTimeString(time);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 export function formatMinutes(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
