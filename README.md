@@ -37,7 +37,7 @@ npm install
 npm start
 ```
 
-Scan the QR code with **Expo Go** on your phone for full map, location, and notification behavior.
+Scan the QR code with **Expo Go from the App Store** (SDK 54) on your phone for full map, location, and notification behavior.
 
 Web preview (UI only — map drawing and silence require a device):
 
