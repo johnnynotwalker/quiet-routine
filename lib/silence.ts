@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import { SilenceReason, SilenceState } from './types';
 
-export const SILENCE_NOTIFICATION_ID = 'quietroutine-silence-status';
+export const STATUS_NOTIFICATION_ID = 'quietroutine-status';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -19,11 +19,11 @@ function buildSilenceMessage(reason: SilenceReason | null): string {
   if (!reason) return 'Phone is silenced';
   switch (reason.type) {
     case 'zone':
-      return `Currently silenced — ${reason.zoneName}`;
+      return `Silenced in ${reason.zoneName}`;
     case 'meeting':
-      return `Currently silenced — ${reason.title}`;
+      return `Silenced for ${reason.title}`;
     case 'manual':
-      return reason.label ? `Currently silenced — ${reason.label}` : 'Currently silenced — manual mode';
+      return reason.label ? `Silenced — ${reason.label}` : 'Silenced — manual mode';
   }
 }
 
@@ -52,15 +52,11 @@ export async function setupNotificationChannel(): Promise<void> {
   }
 }
 
-export async function showSilenceNotification(reason: SilenceReason | null, until: string | null): Promise<void> {
-  const body = until
-    ? `${buildSilenceMessage(reason).replace('Currently silenced — ', '')} · until ${new Date(until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
-    : buildSilenceMessage(reason).replace('Currently silenced — ', '');
-
+async function showStatusNotification(title: string, body: string): Promise<void> {
   await Notifications.scheduleNotificationAsync({
-    identifier: SILENCE_NOTIFICATION_ID,
+    identifier: STATUS_NOTIFICATION_ID,
     content: {
-      title: 'Currently silenced',
+      title,
       body,
       sticky: true,
       priority: Notifications.AndroidNotificationPriority.LOW,
@@ -70,9 +66,25 @@ export async function showSilenceNotification(reason: SilenceReason | null, unti
   });
 }
 
-export async function dismissSilenceNotification(): Promise<void> {
-  await Notifications.dismissNotificationAsync(SILENCE_NOTIFICATION_ID);
-  await Notifications.cancelScheduledNotificationAsync(SILENCE_NOTIFICATION_ID);
+export async function showSilenceNotification(reason: SilenceReason | null, until: string | null): Promise<void> {
+  const detail = buildSilenceMessage(reason);
+  const body = until
+    ? `${detail} · until ${new Date(until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+    : detail;
+
+  await showStatusNotification('Phone is silenced', body);
+}
+
+export async function showNotSilencedNotification(): Promise<void> {
+  await showStatusNotification(
+    'Phone is not silenced',
+    'QuietRoutine is monitoring your zones and schedule.'
+  );
+}
+
+export async function dismissStatusNotification(): Promise<void> {
+  await Notifications.dismissNotificationAsync(STATUS_NOTIFICATION_ID);
+  await Notifications.cancelScheduledNotificationAsync(STATUS_NOTIFICATION_ID);
 }
 
 export async function applySilenceState(state: SilenceState): Promise<void> {
@@ -82,7 +94,7 @@ export async function applySilenceState(state: SilenceState): Promise<void> {
   if (state.isSilenced) {
     await showSilenceNotification(state.reason, state.until);
   } else {
-    await dismissSilenceNotification();
+    await showNotSilencedNotification();
   }
 }
 

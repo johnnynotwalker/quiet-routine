@@ -41,7 +41,7 @@ export default function SilenceStatusCard({ silence }: Props) {
             { backgroundColor: silence.isSilenced ? palette.tint : palette.success },
           ]}
         />
-        <Text style={styles.title}>{silence.isSilenced ? 'Currently silenced' : 'Not silenced'}</Text>
+        <Text style={styles.title}>{silence.isSilenced ? 'Phone is silenced' : 'Phone is not silenced'}</Text>
       </View>
       <Text style={[styles.subtitle, { color: palette.muted }]}>{reasonLabel}</Text>
       {silence.until ? (

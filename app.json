@@ -12,6 +12,8 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "QuietRoutine uses your location to detect silent zones like your office or library.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "QuietRoutine monitors silent zones in the background so your phone can stay quiet automatically.",
+        "NSCalendarsUsageDescription": "QuietRoutine reads your calendar to silence your phone during meetings and routines.",
+        "NSCalendarsFullAccessUsageDescription": "QuietRoutine reads your calendar to silence your phone during meetings and routines.",
         "UIBackgroundModes": ["location", "fetch"]
       }
     },
@@ -26,8 +28,14 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
-        "POST_NOTIFICATIONS"
-      ]
+        "POST_NOTIFICATIONS",
+        "READ_CALENDAR"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -58,6 +66,12 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#5B5FC7"
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "QuietRoutine reads your calendar to auto-silence during events."
         }
       ]
     ],

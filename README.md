@@ -1,20 +1,34 @@
 # QuietRoutine
 
-A mobile app that keeps your phone quiet based on where you are, what you're doing, and what's on your schedule.
+A mobile app that keeps your phone silenced in the right places and at the right times — so you never forget to turn silent mode on or off.
 
 ## Features
 
-- **Silent zones** — Define places (office, library, gym) and automatically enter silence when you arrive. A background notification reminds you the phone is currently silenced.
-- **Daily routines** — Build your day step by step with duration for each block and see a timeline of how long everything takes.
-- **Scheduled silence** — Add a meeting from 11:00 to 12:00 and the app silences automatically for that hour.
-- **Manual silence** — Tap "Silence now" on the home screen any time.
+### Location-based silence
+- **Live map** with your current position
+- **Draw zones** on the map by tapping points, or pick a **radius** of 1m, 10m, or 100m from your location
+- Small zones use live GPS; larger zones use background geofencing
+
+### Calendar-based silence
+- **Google Calendar** — import events from calendars synced on your device (Google on Android, or Google added in iOS Settings)
+- **Built-in calendar** — create events with start/end times and dates
+- **Custom end time** — silence can end at the calendar end or a time you choose
+- **Reminders** — notification 30 minutes before (or 5m, 15m, 60m, or a custom value)
+
+### Always-on status
+- Persistent notification: **"Phone is silenced"** or **"Phone is not silenced"**
+- Shows on lock screen and notification shade with the QuietRoutine icon
+
+### Daily routines
+- Plan your day with timed blocks linked to silent zones
 
 ## Stack
 
 - [Expo](https://expo.dev) + [React Native](https://reactnative.dev)
-- [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) for geofencing
-- [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) for the persistent silence reminder
-- [expo-task-manager](https://docs.expo.dev/versions/latest/sdk/task-manager/) for background zone detection
+- [react-native-maps](https://github.com/react-native-maps/react-native-maps) for the zone map
+- [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) for geofencing and GPS
+- [expo-calendar](https://docs.expo.dev/versions/latest/sdk/calendar/) for Google/device calendar
+- [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) for status and reminders
 
 ## Run locally
 
@@ -23,9 +37,9 @@ npm install
 npm start
 ```
 
-Then scan the QR code with **Expo Go** on your phone, or press `a` for Android emulator / `i` for iOS simulator.
+Scan the QR code with **Expo Go** on your phone for full map, location, and notification behavior.
 
-For web preview (UI only — location/geofencing require a device):
+Web preview (UI only — map drawing and silence require a device):
 
 ```bash
 npm run web
@@ -33,28 +47,28 @@ npm run web
 
 ## Permissions
 
-On first launch the app asks for:
+On first launch, QuietRoutine asks for:
 
-1. **Location (including background)** — to detect when you enter or leave silent zones
-2. **Notifications** — to show the "Currently silenced" reminder in the background
+1. **Location (including background)** — detect silent zones and live position on the map
+2. **Notifications** — always-on silence status and event reminders
+3. **Calendar (optional)** — import Google Calendar or device calendar events
 
 ## Platform notes
 
-- **Android** — Full geofencing and background silence notifications work with the permissions above.
-- **iOS** — Geofencing and silence notifications work, but iOS does not allow third-party apps to change the system ringer or Do Not Disturb. QuietRoutine shows a persistent reminder notification; use Focus modes for system-level silence if needed.
+- **Android** — Full geofencing, GPS zones, calendar import, and persistent notifications.
+- **iOS** — Geofencing and notifications work. Third-party apps cannot change the system ringer; QuietRoutine shows a persistent reminder and can integrate with Focus modes for system-level silence.
 
 ## Project structure
 
 ```
 app/           Expo Router screens (Home, Zones, Routine, Schedule)
-components/    Shared UI
+components/    Map, permissions gate, shared UI
 context/       App state and silence orchestration
-lib/           Storage, geofencing, schedule logic, notifications
+lib/           Storage, geofencing, calendar, reminders, notifications
 ```
 
 ## Example workflow
 
-1. Open **Zones** → tap "Use current location" → save "Office" with a 150m radius.
-2. Open **Routine** → add "Deep work" (90 min) linked to Office.
-3. Open **Schedule** → add "Client call" from 11:00 to 12:00.
-4. When you enter Office or the meeting starts, home shows **Currently silenced** and a notification appears in the background.
+1. **Zones** — open the map, pick 10m radius or draw your office outline, save "Office".
+2. **Schedule** — import a Google Calendar meeting or add "Client call" 11:00–12:00 with a 30m reminder.
+3. **Home** — see "Phone is silenced" when you enter Office or when the meeting starts; the lock screen notification stays visible.

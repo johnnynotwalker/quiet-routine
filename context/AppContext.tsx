@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { syncGeofencing } from '@/lib/geofencing';
+import PermissionsGate from '@/components/PermissionsGate';
+import { checkCurrentLocationZones, syncGeofencing } from '@/lib/geofencing';
+import { setupReminderChannel, syncEventReminders } from '@/lib/reminders';
 import {
   getActiveMeeting,
   meetingEndIso,
@@ -18,11 +20,13 @@ import {
   saveAppData,
   updateRoutines,
   updateSchedule,
+  updateSettings,
   updateSilence,
   updateZones,
 } from '@/lib/storage';
 import {
   AppData,
+  AppSettings,
   DEFAULT_APP_DATA,
   RoutineItem,
   ScheduledSilence,
@@ -38,6 +42,7 @@ type AppContextValue = {
   setRoutines: (routines: RoutineItem[]) => Promise<void>;
   setSchedule: (schedule: ScheduledSilence[]) => Promise<void>;
   setSilence: (silence: SilenceState) => Promise<void>;
+  acknowledgePermissions: () => Promise<void>;
   toggleManualSilence: () => Promise<void>;
 };
 
@@ -93,6 +98,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const evaluated = await evaluateScheduledSilence(loaded);
     setData(evaluated);
     await syncGeofencing(evaluated.zones);
+    await checkCurrentLocationZones();
+    await syncEventReminders(evaluated.schedule);
   }, []);
 
   useEffect(() => {
@@ -101,11 +108,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       await ensureNotificationPermissions();
       await setupNotificationChannel();
+      await setupReminderChannel();
+
       const loaded = await loadAppData();
       const evaluated = await evaluateScheduledSilence(loaded);
       if (!mounted) return;
+
       setData(evaluated);
       await syncGeofencing(evaluated.zones);
+      await syncEventReminders(evaluated.schedule);
+      await applySilenceState(evaluated.silence);
       setLoading(false);
     })();
 
@@ -146,6 +158,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const next = await updateSchedule(schedule);
     const evaluated = await evaluateScheduledSilence(next);
     setData(evaluated);
+    await syncEventReminders(evaluated.schedule);
   }, []);
 
   const setSilence = useCallback(async (silence: SilenceState) => {
@@ -153,6 +166,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setData(next);
     await applySilenceState(silence);
   }, []);
+
+  const acknowledgePermissions = useCallback(async () => {
+    const settings: AppSettings = {
+      ...data.settings,
+      permissionsAcknowledged: true,
+    };
+    const next = await updateSettings(settings);
+    setData(next);
+  }, [data.settings]);
 
   const toggleManualSilence = useCallback(async () => {
     if (data.silence.isSilenced && data.silence.reason?.type === 'manual') {
@@ -177,12 +199,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setRoutines,
       setSchedule,
       setSilence,
+      acknowledgePermissions,
       toggleManualSilence,
     }),
-    [data, loading, refresh, setZones, setRoutines, setSchedule, setSilence, toggleManualSilence]
+    [
+      data,
+      loading,
+      refresh,
+      setZones,
+      setRoutines,
+      setSchedule,
+      setSilence,
+      acknowledgePermissions,
+      toggleManualSilence,
+    ]
   );
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {!loading && !data.settings.permissionsAcknowledged ? (
+        <PermissionsGate visible onComplete={acknowledgePermissions} />
+      ) : null}
+      {children}
+    </AppContext.Provider>
+  );
 }
 
 export function useApp() {

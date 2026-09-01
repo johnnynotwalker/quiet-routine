@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import Button from '@/components/Button';
 import FormField from '@/components/FormField';
 import Screen from '@/components/Screen';
+import ZoneMap from '@/components/ZoneMap';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useApp } from '@/context/AppContext';
-import { getCurrentCoordinates } from '@/lib/geofencing';
+import { polygonCentroid } from '@/lib/polygon';
 import { createId } from '@/lib/time';
-import { SilentZone } from '@/lib/types';
+import { LatLng, RADIUS_PRESETS, SilentZone, ZoneShape } from '@/lib/types';
 
 export default function ZonesScreen() {
   const { data, setZones } = useApp();
@@ -18,40 +19,47 @@ export default function ZonesScreen() {
   const palette = Colors[colorScheme];
 
   const [name, setName] = useState('');
-  const [radius, setRadius] = useState('150');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
-
-  const useCurrentLocation = async () => {
-    const coords = await getCurrentCoordinates();
-    if (!coords) {
-      Alert.alert('Location unavailable', 'Allow location access to use your current position.');
-      return;
-    }
-    setLatitude(coords.latitude.toFixed(6));
-    setLongitude(coords.longitude.toFixed(6));
-  };
+  const [shape, setShape] = useState<ZoneShape>('radius');
+  const [radius, setRadius] = useState<number>(RADIUS_PRESETS[2]);
+  const [center, setCenter] = useState<LatLng | null>(null);
+  const [polygon, setPolygon] = useState<LatLng[]>([]);
 
   const addZone = async () => {
-    if (!name.trim() || !latitude || !longitude) {
-      Alert.alert('Missing details', 'Add a name and location for this silent zone.');
+    if (!name.trim()) {
+      Alert.alert('Missing name', 'Give this silent zone a name.');
       return;
     }
+
+    if (shape === 'radius' && !center) {
+      Alert.alert('Missing location', 'Allow location access or tap the map to set a center point.');
+      return;
+    }
+
+    if (shape === 'polygon' && polygon.length < 3) {
+      Alert.alert('Incomplete zone', 'Draw at least 3 points on the map to outline your silent area.');
+      return;
+    }
+
+    const zoneCenter =
+      shape === 'radius' && center
+        ? center
+        : polygonCentroid(polygon);
 
     const zone: SilentZone = {
       id: createId('zone'),
       name: name.trim(),
-      latitude: Number(latitude),
-      longitude: Number(longitude),
-      radius: Math.max(50, Number(radius) || 150),
+      shape,
+      latitude: zoneCenter.latitude,
+      longitude: zoneCenter.longitude,
+      radius: shape === 'radius' ? radius : 0,
+      polygon: shape === 'polygon' ? polygon : undefined,
       enabled: true,
     };
 
     await setZones([...data.zones, zone]);
     setName('');
-    setRadius('150');
-    setLatitude('');
-    setLongitude('');
+    setPolygon([]);
+    setRadius(RADIUS_PRESETS[2]);
   };
 
   const toggleZone = async (zoneId: string, enabled: boolean) => {
@@ -65,39 +73,53 @@ export default function ZonesScreen() {
   return (
     <Screen
       title="Silent zones"
-      subtitle="Define places where your phone should stay quiet automatically.">
+      subtitle="Use the live map to draw a zone or pick a radius from your location.">
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.cardTitle}>Add a zone</Text>
+          <Text style={styles.cardTitle}>Zone type</Text>
+          <View style={styles.shapeRow}>
+            <ShapeChip
+              label="Radius from location"
+              active={shape === 'radius'}
+              onPress={() => setShape('radius')}
+              palette={palette}
+            />
+            <ShapeChip
+              label="Draw on map"
+              active={shape === 'polygon'}
+              onPress={() => setShape('polygon')}
+              palette={palette}
+            />
+          </View>
+        </View>
+
+        <ZoneMap
+          shape={shape}
+          radius={radius}
+          polygon={polygon}
+          onRadiusChange={setRadius}
+          onPolygonChange={setPolygon}
+          onCenterChange={setCenter}
+        />
+
+        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+          <Text style={styles.cardTitle}>Save zone</Text>
           <FormField label="Place name" value={name} onChangeText={setName} placeholder="Library, office, gym..." />
-          <FormField
-            label="Radius (meters)"
-            value={radius}
-            onChangeText={setRadius}
-            keyboardType="numeric"
-            placeholder="150"
-          />
-          <FormField
-            label="Latitude"
-            value={latitude}
-            onChangeText={setLatitude}
-            keyboardType="numbers-and-punctuation"
-            placeholder="37.774929"
-          />
-          <FormField
-            label="Longitude"
-            value={longitude}
-            onChangeText={setLongitude}
-            keyboardType="numbers-and-punctuation"
-            placeholder="-122.419416"
-          />
-          <Button title="Use current location" variant="secondary" onPress={useCurrentLocation} />
+          {shape === 'radius' ? (
+            <Text style={[styles.meta, { color: palette.muted }]}>
+              Current radius: {radius}m {radius < 100 ? '(uses live GPS for small zones)' : '(uses geofencing)'}
+            </Text>
+          ) : (
+            <Text style={[styles.meta, { color: palette.muted }]}>
+              {polygon.length} point{polygon.length === 1 ? '' : 's'} drawn
+            </Text>
+          )}
           <Button title="Save silent zone" onPress={addZone} />
         </View>
 
         {data.zones.length === 0 ? (
           <Text style={[styles.empty, { color: palette.muted }]}>
-            No zones yet. Add your office, classroom, or any place where you want automatic silence.
+            No zones yet. Draw your classroom, office, or a tight 1m bubble around your desk.
           </Text>
         ) : (
           data.zones.map((zone) => (
@@ -108,7 +130,9 @@ export default function ZonesScreen() {
                 <View style={styles.zoneText}>
                   <Text style={styles.zoneName}>{zone.name}</Text>
                   <Text style={[styles.meta, { color: palette.muted }]}>
-                    {zone.radius}m radius · {zone.latitude.toFixed(4)}, {zone.longitude.toFixed(4)}
+                    {zone.shape === 'polygon'
+                      ? `Drawn zone · ${zone.polygon?.length ?? 0} points`
+                      : `${zone.radius}m radius`}
                   </Text>
                 </View>
                 <Switch value={zone.enabled} onValueChange={(value) => toggleZone(zone.id, value)} />
@@ -119,6 +143,32 @@ export default function ZonesScreen() {
         )}
       </ScrollView>
     </Screen>
+  );
+}
+
+function ShapeChip({
+  label,
+  active,
+  onPress,
+  palette,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  palette: (typeof Colors)['light'];
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.shapeChip,
+        {
+          backgroundColor: active ? palette.tint : palette.card,
+          borderColor: palette.border,
+        },
+      ]}>
+      <Text style={{ color: active ? '#FFF' : palette.text, fontWeight: '600', fontSize: 13 }}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -136,6 +186,17 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  shapeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  shapeChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   zoneHeader: {
     flexDirection: 'row',

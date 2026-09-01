@@ -1,6 +1,13 @@
 import { ScheduledSilence, SilenceReason } from './types';
 import { isTimeWithinRange, todayIsoDate } from './time';
 
+export function getEffectiveEndTime(meeting: ScheduledSilence): string {
+  if (!meeting.useCalendarEnd && meeting.customEndTime) {
+    return meeting.customEndTime;
+  }
+  return meeting.endTime;
+}
+
 export function getActiveMeeting(
   schedule: ScheduledSilence[],
   now = new Date()
@@ -10,7 +17,9 @@ export function getActiveMeeting(
   for (const meeting of schedule) {
     if (!meeting.enabled) continue;
     if (meeting.date && meeting.date !== today) continue;
-    if (isTimeWithinRange(now, meeting.startTime, meeting.endTime)) {
+
+    const endTime = getEffectiveEndTime(meeting);
+    if (isTimeWithinRange(now, meeting.startTime, endTime)) {
       return meeting;
     }
   }
@@ -27,7 +36,8 @@ export function meetingSilenceReason(meeting: ScheduledSilence): SilenceReason {
 }
 
 export function meetingEndIso(meeting: ScheduledSilence, now = new Date()): string {
-  const [endHour, endMinute] = meeting.endTime.split(':').map(Number);
+  const endTime = getEffectiveEndTime(meeting);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
   const end = new Date(now);
   end.setHours(endHour, endMinute, 0, 0);
 
@@ -36,6 +46,14 @@ export function meetingEndIso(meeting: ScheduledSilence, now = new Date()): stri
   const endMinutes = endHour * 60 + endMinute;
   if (endMinutes <= startMinutes) {
     end.setDate(end.getDate() + 1);
+  }
+
+  if (meeting.date) {
+    const [year, month, day] = meeting.date.split('-').map(Number);
+    end.setFullYear(year, month - 1, day);
+    if (endMinutes <= startMinutes) {
+      end.setDate(end.getDate() + 1);
+    }
   }
 
   return end.toISOString();
