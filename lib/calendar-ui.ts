@@ -26,6 +26,35 @@ export function monthLabel(year: number, month: number): string {
   });
 }
 
+export type WeekDay = {
+  iso: string;
+  weekday: string;
+  day: number;
+  isToday: boolean;
+};
+
+export function buildWeekStrip(centerIso: string, span = 14): WeekDay[] {
+  const center = parseIsoDate(centerIso);
+  const centerDate = new Date(center.year, center.month - 1, center.day);
+  const today = todayParts();
+  const todayIso = toIsoDate(today.year, today.month, today.day);
+  const days: WeekDay[] = [];
+
+  for (let offset = -Math.floor(span / 2); offset <= Math.floor(span / 2); offset++) {
+    const date = new Date(centerDate);
+    date.setDate(centerDate.getDate() + offset);
+    const iso = toIsoDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    days.push({
+      iso,
+      weekday: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 3),
+      day: date.getDate(),
+      isToday: iso === todayIso,
+    });
+  }
+
+  return days;
+}
+
 export type CalendarCell = {
   iso: string;
   day: number;

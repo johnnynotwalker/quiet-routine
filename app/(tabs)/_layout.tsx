@@ -4,26 +4,13 @@ import { Tabs } from 'expo-router';
 import { ComponentProps } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
+import { GlowTabIcon } from '@/components/GlowTabIcon';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { radius, shadow } from '@/constants/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
-
-function TabIcon({ name, color }: { name: IconName; color: string }) {
-  return <Ionicons name={name} size={22} color={color} />;
-}
-
-function TabBarBackground() {
-  const colorScheme = useColorScheme() ?? 'light';
-
-  if (Platform.OS === 'ios') {
-    return <BlurView intensity={72} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />;
-  }
-
-  return null;
-}
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -34,53 +21,55 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: palette.tint,
         tabBarInactiveTintColor: palette.tabIconDefault,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginBottom: 4,
-        },
+        tabBarShowLabel: false,
         tabBarStyle: {
           position: 'absolute',
-          left: 16,
-          right: 16,
-          bottom: 20,
-          height: 64,
-          borderRadius: radius.xl,
+          left: 48,
+          right: 48,
+          bottom: 24,
+          height: 58,
+          borderRadius: radius.pill,
           borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.55)',
           backgroundColor: Platform.OS === 'ios' ? 'transparent' : palette.glass,
           ...shadow.card,
           overflow: 'hidden',
         },
-        tabBarBackground: TabBarBackground,
+        tabBarBackground: () =>
+          Platform.OS === 'ios' ? (
+            <BlurView intensity={90} tint="light" style={StyleSheet.absoluteFill} />
+          ) : null,
         headerShown: useClientOnlyValue(false, true),
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <TabIcon name="home-outline" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="zones"
-        options={{
-          title: 'Zones',
-          tabBarIcon: ({ color }) => <TabIcon name="location-outline" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="routines"
-        options={{
-          href: null,
+          tabBarIcon: ({ color, focused }) => (
+            <GlowTabIcon name={focused ? 'home' : 'home-outline'} color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="schedule"
         options={{
           title: 'Calendar',
-          tabBarIcon: ({ color }) => <TabIcon name="calendar-outline" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <GlowTabIcon name={focused ? 'calendar' : 'calendar-outline'} color={color} focused={focused} />
+          ),
         }}
       />
+      <Tabs.Screen
+        name="zones"
+        options={{
+          title: 'Zones',
+          tabBarIcon: ({ color, focused }) => (
+            <GlowTabIcon name={focused ? 'location' : 'location-outline'} color={color} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="routines" options={{ href: null }} />
     </Tabs>
   );
 }

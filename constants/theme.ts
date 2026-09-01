@@ -19,17 +19,24 @@ export const radius = {
 export const shadow = {
   card: {
     shadowColor: 'rgba(15, 23, 42, 0.04)',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 3,
+    shadowRadius: 28,
+    elevation: 2,
   },
   soft: {
     shadowColor: 'rgba(15, 23, 42, 0.04)',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 16,
-    elevation: 2,
+    elevation: 1,
+  },
+  glow: {
+    shadowColor: 'rgba(56, 189, 248, 0.45)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 0,
   },
 } as const;
 
@@ -40,8 +47,8 @@ export const switchColors = {
 } as const;
 
 export const typography = {
-  hero: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -0.5 },
-  title: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.3 },
+  hero: { fontSize: 34, fontWeight: '600' as const, letterSpacing: -0.8 },
+  title: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.4 },
   heading: { fontSize: 18, fontWeight: '600' as const },
   body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 22 },
   caption: { fontSize: 13, fontWeight: '500' as const, lineHeight: 18 },

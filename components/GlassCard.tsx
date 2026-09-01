@@ -11,9 +11,16 @@ type Props = {
   style?: ViewStyle;
   contentStyle?: ViewStyle;
   highlighted?: boolean;
+  compact?: boolean;
 };
 
-export default function GlassCard({ children, style, contentStyle, highlighted = false }: Props) {
+export default function GlassCard({
+  children,
+  style,
+  contentStyle,
+  highlighted = false,
+  compact = false,
+}: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
@@ -21,11 +28,12 @@ export default function GlassCard({ children, style, contentStyle, highlighted =
     <View
       style={[
         styles.inner,
+        compact && styles.innerCompact,
         {
-          borderColor: highlighted ? palette.tint : palette.glassBorder,
-          backgroundColor: Platform.OS === 'android' ? palette.glass : 'transparent',
+          borderColor: highlighted ? 'rgba(56, 189, 248, 0.35)' : 'rgba(255, 255, 255, 0.5)',
+          backgroundColor: Platform.OS === 'android' ? palette.glass : 'rgba(255,255,255,0.35)',
         },
-        highlighted && { backgroundColor: palette.accent },
+        highlighted && { backgroundColor: 'rgba(56, 189, 248, 0.08)' },
         contentStyle,
       ]}>
       {children}
@@ -35,7 +43,7 @@ export default function GlassCard({ children, style, contentStyle, highlighted =
   if (Platform.OS === 'ios') {
     return (
       <View style={[styles.shadow, style]}>
-        <BlurView intensity={64} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.blur}>
+        <BlurView intensity={85} tint="light" style={styles.blur}>
           {inner}
         </BlurView>
       </View>
@@ -47,21 +55,24 @@ export default function GlassCard({ children, style, contentStyle, highlighted =
 
 const styles = StyleSheet.create({
   shadow: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     ...shadow.card,
   },
   blur: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     overflow: 'hidden',
   },
   fallback: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
   },
   inner: {
-    padding: spacing.xl,
+    padding: spacing.xxl,
     gap: spacing.md,
     borderWidth: 1,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
+  },
+  innerCompact: {
+    padding: spacing.lg,
   },
 });

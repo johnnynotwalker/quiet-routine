@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import MapView, { Circle, Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
+import PulsingMarker from '@/components/PulsingMarker';
 import Chip from '@/components/Chip';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getCurrentCoordinates, watchCurrentLocation } from '@/lib/geofencing';
-import { LatLng, RADIUS_PRESETS, ZoneShape } from '@/lib/types';
+import { LatLng, RADIUS_PRESETS, SilentZone, ZoneShape } from '@/lib/types';
 import { radius as radii, spacing } from '@/constants/theme';
 
 type Props = {
@@ -17,6 +18,9 @@ type Props = {
   onRadiusChange: (radius: number) => void;
   onPolygonChange: (polygon: LatLng[]) => void;
   onCenterChange: (center: LatLng) => void;
+  fullBleed?: boolean;
+  savedZones?: SilentZone[];
+  activeZoneId?: string | null;
 };
 
 const DEFAULT_REGION: Region = {
@@ -33,6 +37,9 @@ export default function ZoneMap({
   onRadiusChange,
   onPolygonChange,
   onCenterChange,
+  fullBleed = false,
+  savedZones = [],
+  activeZoneId = null,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -89,15 +96,56 @@ export default function ZoneMap({
   const clearPolygon = () => onPolygonChange([]);
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, fullBleed && styles.wrapperFull]}>
       <MapView
         ref={mapRef}
-        style={styles.map}
+        style={[styles.map, fullBleed && styles.mapFull]}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={region}
         showsUserLocation
         showsMyLocationButton
         onPress={handleMapPress}>
+        {fullBleed
+          ? savedZones.map((zone) => {
+              const isActive = zone.id === activeZoneId;
+              const stroke = isActive ? palette.tint : '#94A3B8';
+              const fill = isActive ? 'rgba(56, 189, 248, 0.22)' : 'rgba(148, 163, 184, 0.14)';
+              if (zone.shape === 'radius') {
+                return (
+                  <Circle
+                    key={zone.id}
+                    center={{ latitude: zone.latitude, longitude: zone.longitude }}
+                    radius={zone.radius}
+                    strokeColor={stroke}
+                    fillColor={fill}
+                    strokeWidth={isActive ? 2 : 1}
+                  />
+                );
+              }
+              if (zone.polygon && zone.polygon.length >= 3) {
+                return (
+                  <Polygon
+                    key={zone.id}
+                    coordinates={zone.polygon}
+                    strokeColor={stroke}
+                    fillColor={fill}
+                    strokeWidth={isActive ? 2 : 1}
+                  />
+                );
+              }
+              return null;
+            })
+          : null}
+        {fullBleed
+          ? savedZones.map((zone) => (
+              <Marker
+                key={`marker-${zone.id}`}
+                coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
+                anchor={{ x: 0.5, y: 0.5 }}>
+                <PulsingMarker active={zone.id === activeZoneId} />
+              </Marker>
+            ))
+          : null}
         {center && shape === 'radius' ? (
           <>
             <Marker coordinate={center} title="Zone center" />
@@ -114,7 +162,7 @@ export default function ZoneMap({
           <Polygon
             coordinates={polygon}
             strokeColor={palette.tint}
-            fillColor="rgba(91, 95, 199, 0.18)"
+            fillColor="rgba(56, 189, 248, 0.18)"
             strokeWidth={2}
           />
         ) : null}
@@ -125,7 +173,7 @@ export default function ZoneMap({
           : null}
       </MapView>
 
-      {shape === 'radius' ? (
+      {!fullBleed && shape === 'radius' ? (
         <View style={[styles.overlay, { backgroundColor: palette.glass, borderColor: palette.border }]}>
           <Text style={[styles.overlayTitle, { color: palette.text }]}>Silence radius</Text>
           <View style={styles.presets}>
@@ -163,7 +211,7 @@ export default function ZoneMap({
             Tap the map to move the center. Your live location updates the zone automatically.
           </Text>
         </View>
-      ) : (
+      ) : !fullBleed ? (
         <View style={[styles.overlay, { backgroundColor: palette.glass, borderColor: palette.border }]}>
           <Text style={[styles.overlayTitle, { color: palette.text }]}>Draw your zone</Text>
           <Text style={[styles.hint, { color: palette.muted }]}>
@@ -182,7 +230,7 @@ export default function ZoneMap({
             </Pressable>
           </View>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -194,9 +242,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.22)',
   },
+  wrapperFull: {
+    flex: 1,
+    borderRadius: 0,
+    borderWidth: 0,
+  },
   map: {
     width: '100%',
     height: 280,
+  },
+  mapFull: {
+    flex: 1,
+    height: undefined,
   },
   overlay: {
     padding: 12,

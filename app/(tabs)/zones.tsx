@@ -1,21 +1,40 @@
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import AppSwitch from '@/components/AppSwitch';
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
 import FormField from '@/components/FormField';
-import GlassCard from '@/components/GlassCard';
+import GlassBottomSheet from '@/components/GlassBottomSheet';
 import Screen from '@/components/Screen';
 import ZoneMap from '@/components/ZoneMap';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { polygonCentroid } from '@/lib/polygon';
 import { createId } from '@/lib/time';
+import { spacing, typography } from '@/constants/theme';
 import { LatLng, RADIUS_PRESETS, SilentZone, ZoneShape } from '@/lib/types';
+
+function SheetStat({
+  icon,
+  label,
+  accent,
+  palette,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  accent?: string;
+  palette: (typeof Colors)['light'];
+}) {
+  return (
+    <View style={styles.stat}>
+      <Ionicons name={icon} size={14} color={accent ?? palette.muted} />
+      <Text style={[styles.statText, { color: accent ?? palette.muted }]}>{label}</Text>
+    </View>
+  );
+}
 
 export default function ZonesScreen() {
   const { data, setZones } = useApp();
@@ -27,25 +46,33 @@ export default function ZonesScreen() {
   const [radius, setRadius] = useState<number>(RADIUS_PRESETS[2]);
   const [center, setCenter] = useState<LatLng | null>(null);
   const [polygon, setPolygon] = useState<LatLng[]>([]);
+  const [composerOpen, setComposerOpen] = useState(false);
+
+  const activeZoneId =
+    data.silence.reason?.type === 'zone' ? data.silence.reason.zoneId : null;
+
+  const activeZone = useMemo(() => {
+    if (activeZoneId) {
+      return data.zones.find((zone) => zone.id === activeZoneId);
+    }
+    return data.zones.find((zone) => zone.enabled) ?? data.zones[0];
+  }, [activeZoneId, data.zones]);
 
   const addZone = async () => {
     if (!name.trim()) {
       Alert.alert('Missing name', 'Give this silent zone a name.');
       return;
     }
-
     if (shape === 'radius' && !center) {
       Alert.alert('Missing location', 'Allow location access or tap the map to set a center point.');
       return;
     }
-
     if (shape === 'polygon' && polygon.length < 3) {
-      Alert.alert('Incomplete zone', 'Draw at least 3 points on the map to outline your silent area.');
+      Alert.alert('Incomplete zone', 'Draw at least 3 points on the map.');
       return;
     }
 
     const zoneCenter = shape === 'radius' && center ? center : polygonCentroid(polygon);
-
     const zone: SilentZone = {
       id: createId('zone'),
       name: name.trim(),
@@ -61,27 +88,12 @@ export default function ZonesScreen() {
     setName('');
     setPolygon([]);
     setRadius(RADIUS_PRESETS[2]);
-  };
-
-  const toggleZone = async (zoneId: string, enabled: boolean) => {
-    await setZones(data.zones.map((zone) => (zone.id === zoneId ? { ...zone, enabled } : zone)));
-  };
-
-  const removeZone = async (zoneId: string) => {
-    await setZones(data.zones.filter((zone) => zone.id !== zoneId));
+    setComposerOpen(false);
   };
 
   return (
-    <Screen title="Silent zones" subtitle="Draw a bubble on the map or set a custom radius.">
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <GlassCard contentStyle={styles.card}>
-          <Text style={[styles.cardTitle, { color: palette.text }]}>Zone type</Text>
-          <View style={styles.shapeRow}>
-            <Chip label="Radius" active={shape === 'radius'} onPress={() => setShape('radius')} />
-            <Chip label="Draw on map" active={shape === 'polygon'} onPress={() => setShape('polygon')} />
-          </View>
-        </GlassCard>
-
+    <Screen title="Zones">
+      <View style={styles.mapArea}>
         <ZoneMap
           shape={shape}
           radius={radius}
@@ -89,86 +101,103 @@ export default function ZonesScreen() {
           onRadiusChange={setRadius}
           onPolygonChange={setPolygon}
           onCenterChange={setCenter}
+          fullBleed
+          savedZones={data.zones}
+          activeZoneId={activeZoneId}
         />
 
-        <GlassCard contentStyle={styles.card}>
-          <Text style={[styles.cardTitle, { color: palette.text }]}>Save zone</Text>
-          <FormField label="Place name" value={name} onChangeText={setName} placeholder="Library, office, gym..." />
-          {shape === 'radius' ? (
-            <Text style={[styles.meta, { color: palette.muted }]}>
-              Current radius: {radius}m {radius < 100 ? '(live GPS)' : '(geofencing)'}
-            </Text>
-          ) : (
-            <Text style={[styles.meta, { color: palette.muted }]}>
-              {polygon.length} point{polygon.length === 1 ? '' : 's'} drawn
-            </Text>
-          )}
-          <Button title="Save silent zone" onPress={addZone} />
-        </GlassCard>
-
-        {data.zones.length === 0 ? (
-          <Text style={[styles.empty, { color: palette.muted }]}>
-            No zones yet. Draw your classroom, office, or a tight bubble around your desk.
-          </Text>
-        ) : (
-          data.zones.map((zone) => (
-            <GlassCard key={zone.id} contentStyle={styles.card}>
-              <View style={styles.zoneHeader}>
-                <View style={styles.zoneText}>
-                  <Text style={[styles.zoneName, { color: palette.text }]}>{zone.name}</Text>
-                  <Text style={[styles.meta, { color: palette.muted }]}>
-                    {zone.shape === 'polygon'
-                      ? `Drawn zone · ${zone.polygon?.length ?? 0} points`
-                      : `${zone.radius}m radius`}
-                  </Text>
-                </View>
-                <AppSwitch value={zone.enabled} onValueChange={(value) => toggleZone(zone.id, value)} />
+        <GlassBottomSheet>
+          {composerOpen ? (
+            <>
+              <Text style={[styles.sheetTitle, { color: palette.text }]}>New zone</Text>
+              <View style={styles.shapeRow}>
+                <Chip label="Radius" active={shape === 'radius'} onPress={() => setShape('radius')} />
+                <Chip label="Draw" active={shape === 'polygon'} onPress={() => setShape('polygon')} />
               </View>
-              <Button title="Remove zone" variant="danger" onPress={() => removeZone(zone.id)} />
-            </GlassCard>
-          ))
-        )}
-      </ScrollView>
+              <FormField label="Place name" value={name} onChangeText={setName} placeholder="Work, home..." />
+              {shape === 'radius' ? (
+                <View style={styles.shapeRow}>
+                  {RADIUS_PRESETS.map((preset) => (
+                    <Chip
+                      key={preset}
+                      label={`${preset}m`}
+                      active={radius === preset}
+                      onPress={() => setRadius(preset)}
+                    />
+                  ))}
+                </View>
+              ) : null}
+              <Button title="Save zone" onPress={addZone} />
+              <Button title="Cancel" variant="secondary" onPress={() => setComposerOpen(false)} />
+            </>
+          ) : (
+            <>
+              <Text style={[styles.sheetTitle, { color: palette.text }]}>
+                {activeZone?.name ?? 'No zones yet'}
+              </Text>
+              {activeZone ? (
+                <View style={styles.statsRow}>
+                  <SheetStat
+                    icon="ellipse"
+                    label={activeZone.enabled ? 'Active' : 'Inactive'}
+                    accent={activeZone.enabled ? '#34D399' : palette.muted}
+                    palette={palette}
+                  />
+                  <SheetStat
+                    icon="resize-outline"
+                    label={
+                      activeZone.shape === 'polygon'
+                        ? `${activeZone.polygon?.length ?? 0} pts`
+                        : `${activeZone.radius}m`
+                    }
+                    palette={palette}
+                  />
+                  <SheetStat icon="time-outline" label="Strict" palette={palette} />
+                </View>
+              ) : (
+                <Text style={[styles.sheetMeta, { color: palette.muted }]}>
+                  Add a zone to auto-silence by location
+                </Text>
+              )}
+              <Button title="Add New Zone" onPress={() => setComposerOpen(true)} />
+            </>
+          )}
+        </GlassBottomSheet>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    gap: spacing.lg,
-    paddingBottom: 120,
+  mapArea: {
+    flex: 1,
+    marginHorizontal: -spacing.screen,
+    marginBottom: -spacing.lg,
   },
-  card: {
-    gap: spacing.md,
-  },
-  cardTitle: {
+  sheetTitle: {
     ...typography.heading,
+    fontSize: 20,
+  },
+  sheetMeta: {
+    ...typography.body,
+    fontSize: 14,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    flexWrap: 'wrap',
+  },
+  stat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   shapeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  zoneHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  zoneText: {
-    flex: 1,
-    gap: 4,
-  },
-  zoneName: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  meta: {
-    ...typography.caption,
-  },
-  empty: {
-    ...typography.body,
-    textAlign: 'center',
-    paddingHorizontal: spacing.lg,
   },
 });

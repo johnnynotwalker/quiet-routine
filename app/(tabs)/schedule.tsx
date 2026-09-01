@@ -6,9 +6,11 @@ import Button from '@/components/Button';
 import Chip from '@/components/Chip';
 import FormField from '@/components/FormField';
 import GlassCard from '@/components/GlassCard';
-import MiniCalendar from '@/components/MiniCalendar';
+import { HeaderIconButton } from '@/components/GlowTabIcon';
+import ScheduleEventRow from '@/components/ScheduleEventRow';
 import Screen from '@/components/Screen';
 import TimePickerField from '@/components/TimePickerField';
+import WeekStrip from '@/components/WeekStrip';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -20,24 +22,27 @@ import {
   fetchUpcomingCalendarEvents,
   requestCalendarPermissions,
 } from '@/lib/calendar';
-import { parseIsoDate, todayParts } from '@/lib/calendar-ui';
+import { todayParts } from '@/lib/calendar-ui';
 import { getEffectiveEndTime } from '@/lib/schedule';
-import { createId, formatDurationBetween, formatTimeLabel, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
+import { createId, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
 import { spacing, typography } from '@/constants/theme';
 import { ScheduledSilence } from '@/lib/types';
 
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
+
+function scheduleIcon(title: string): 'radio-button-on-outline' | 'moon-outline' | 'sunny-outline' {
+  const lower = title.toLowerCase();
+  if (lower.includes('focus')) return 'radio-button-on-outline';
+  if (lower.includes('quiet') || lower.includes('evening') || lower.includes('night')) return 'moon-outline';
+  return 'sunny-outline';
+}
 
 export default function ScheduleScreen() {
   const { data, setSchedule } = useApp();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
-  const initial = todayParts();
-  const [year, setYear] = useState(initial.year);
-  const [month, setMonth] = useState(initial.month);
   const [selectedDate, setSelectedDate] = useState(todayIsoDate());
-
   const [title, setTitle] = useState('');
   const [startTime, setStartTime] = useState('11:00');
   const [endTime, setEndTime] = useState('12:00');
@@ -74,7 +79,6 @@ export default function ScheduleScreen() {
       setLoadingCalendar(false);
       return;
     }
-
     const events = await fetchUpcomingCalendarEvents();
     setCalendarEvents(events);
     setLoadingCalendar(false);
@@ -84,36 +88,21 @@ export default function ScheduleScreen() {
     loadCalendarEvents().catch(console.error);
   }, []);
 
-  const handleSelectDate = (iso: string) => {
-    setSelectedDate(iso);
-    const parts = parseIsoDate(iso);
-    setYear(parts.year);
-    setMonth(parts.month);
-  };
-
-  const handleMonthChange = (nextYear: number, nextMonth: number) => {
-    setYear(nextYear);
-    setMonth(nextMonth);
-  };
-
   const addMeeting = async () => {
     if (!title.trim()) {
       Alert.alert('Missing title', 'Name this event or focus block.');
       return;
     }
-
     if (!useCalendarEnd && parseTimeToMinutes(customEndTime) <= parseTimeToMinutes(startTime)) {
       Alert.alert('Invalid time range', 'Silence end must be after the start time.');
       return;
     }
-
     if (parseTimeToMinutes(endTime) <= parseTimeToMinutes(startTime)) {
       Alert.alert('Invalid time range', 'End time must be after start time.');
       return;
     }
 
     const reminder = customReminder ? Math.max(0, Number(customReminder) || 0) : reminderMinutes;
-
     const meeting: ScheduledSilence = {
       id: createId('meeting'),
       title: title.trim(),
@@ -129,12 +118,6 @@ export default function ScheduleScreen() {
 
     await setSchedule([...data.schedule, meeting]);
     setTitle('');
-    setStartTime('11:00');
-    setEndTime('12:00');
-    setUseCalendarEnd(true);
-    setCustomEndTime('12:30');
-    setCustomReminder('');
-    setReminderMinutes(30);
     setShowAddForm(false);
   };
 
@@ -144,10 +127,9 @@ export default function ScheduleScreen() {
       Alert.alert('Already added', 'This calendar event is already in your schedule.');
       return;
     }
-
     const meeting = calendarEventToScheduledSilence(event, data.settings.defaultReminderMinutes);
     await setSchedule([...data.schedule, meeting]);
-    if (meeting.date) handleSelectDate(meeting.date);
+    if (meeting.date) setSelectedDate(meeting.date);
   };
 
   const toggleMeeting = async (meetingId: string, enabled: boolean) => {
@@ -160,95 +142,54 @@ export default function ScheduleScreen() {
     await setSchedule(data.schedule.filter((meeting) => meeting.id !== meetingId));
   };
 
-  const selectedLabel = new Date(
-    parseIsoDate(selectedDate).year,
-    parseIsoDate(selectedDate).month - 1,
-    parseIsoDate(selectedDate).day
-  ).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-
   return (
     <Screen
-      title="Calendar"
-      subtitle="Mini calendar with event alarms and optional Google Calendar import.">
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <MiniCalendar
-          year={year}
-          month={month}
-          selectedDate={selectedDate}
-          markedDates={markedDates}
-          onMonthChange={handleMonthChange}
-          onSelectDate={handleSelectDate}
+      title="Schedule"
+      action={
+        <HeaderIconButton
+          name={showAddForm ? 'close' : 'add'}
+          onPress={() => setShowAddForm((v) => !v)}
         />
+      }>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <WeekStrip selectedDate={selectedDate} markedDates={markedDates} onSelectDate={setSelectedDate} />
 
-        <GlassCard contentStyle={styles.card}>
-          <View style={styles.row}>
-            <Text style={[styles.cardTitle, { color: palette.text }]}>{selectedLabel}</Text>
-            <Button title={showAddForm ? 'Cancel' : 'Add event'} onPress={() => setShowAddForm((v) => !v)} />
-          </View>
-
+        <View style={styles.list}>
           {eventsForSelectedDay.length === 0 ? (
-            <Text style={[styles.helper, { color: palette.muted }]}>
-              No events on this day. Tap Add event to schedule silence and an alarm reminder.
+            <Text style={[styles.empty, { color: palette.muted }]}>
+              No events this day. Tap + to add a focus session.
             </Text>
           ) : (
-            eventsForSelectedDay.map((meeting) => {
-              const effectiveEnd = getEffectiveEndTime(meeting);
-              return (
-                <View key={meeting.id} style={styles.eventRow}>
-                  <View style={styles.textBlock}>
-                    <Text style={[styles.itemTitle, { color: palette.text }]}>{meeting.title}</Text>
-                    <Text style={[styles.meta, { color: palette.muted }]}>
-                      {formatTimeLabel(meeting.startTime)} – {formatTimeLabel(effectiveEnd)}
-                      {!meeting.useCalendarEnd ? ' (custom end)' : ''}
-                    </Text>
-                    <Text style={[styles.meta, { color: palette.muted }]}>
-                      {formatDurationBetween(meeting.startTime, effectiveEnd)} · alarm{' '}
-                      {meeting.reminderMinutes > 0 ? `${meeting.reminderMinutes}m before` : 'off'}
-                      {meeting.source === 'google' ? ' · Google' : ''}
-                    </Text>
-                  </View>
-                  <AppSwitch value={meeting.enabled} onValueChange={(value) => toggleMeeting(meeting.id, value)} />
-                  <Button title="Remove" variant="danger" onPress={() => removeMeeting(meeting.id)} />
-                </View>
-              );
-            })
+            eventsForSelectedDay.map((meeting) => (
+              <ScheduleEventRow
+                key={meeting.id}
+                title={meeting.title}
+                startTime={meeting.startTime}
+                endTime={getEffectiveEndTime(meeting)}
+                enabled={meeting.enabled}
+                icon={scheduleIcon(meeting.title)}
+                onToggle={(value) => toggleMeeting(meeting.id, value)}
+              />
+            ))
           )}
-        </GlassCard>
+        </View>
 
         {showAddForm ? (
-          <GlassCard contentStyle={styles.card}>
-            <Text style={[styles.cardTitle, { color: palette.text }]}>New event on {selectedDate}</Text>
-            <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Class, meeting, focus..." />
-
-            <Text style={[styles.label, { color: palette.muted }]}>Event time</Text>
-            <Text style={[styles.helper, { color: palette.muted }]}>
-              Use your phone&apos;s built-in time picker wheels.
-            </Text>
+          <GlassCard contentStyle={styles.form}>
+            <Text style={[styles.formTitle, { color: palette.text }]}>New event</Text>
+            <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Focus session..." />
             <View style={styles.timeColumn}>
               <TimePickerField label="Starts" value={startTime} onChange={setStartTime} />
               <TimePickerField label="Ends" value={endTime} onChange={setEndTime} />
             </View>
-
             <View style={styles.switchRow}>
-              <View style={styles.textBlock}>
-                <Text style={styles.switchLabel}>Use event end time</Text>
-                <Text style={[styles.meta, { color: palette.muted }]}>Turn off to set a custom silence end.</Text>
-              </View>
+              <Text style={[styles.switchLabel, { color: palette.text }]}>Use event end time</Text>
               <AppSwitch value={useCalendarEnd} onValueChange={setUseCalendarEnd} />
             </View>
-
             {!useCalendarEnd ? (
               <TimePickerField label="Silence ends" value={customEndTime} onChange={setCustomEndTime} />
             ) : null}
-
-            <Text style={[styles.label, { color: palette.muted }]}>Alarm before event</Text>
-            <Text style={[styles.helper, { color: palette.muted }]}>
-              Plays a loud sound and vibrates — not just a quiet notification.
-            </Text>
+            <Text style={[styles.switchLabel, { color: palette.muted }]}>Alarm before</Text>
             <View style={styles.chipRow}>
               {REMINDER_PRESETS.map((preset) => (
                 <Chip
@@ -262,52 +203,34 @@ export default function ScheduleScreen() {
                 />
               ))}
             </View>
-            <FormField
-              label="Custom alarm (minutes before)"
-              value={customReminder}
-              onChangeText={setCustomReminder}
-              keyboardType="numeric"
-              placeholder="45"
-            />
-
             <Button title="Save event" onPress={addMeeting} />
           </GlassCard>
         ) : null}
 
-        <GlassCard contentStyle={styles.card}>
-          <Pressable onPress={() => setShowGoogleImport((v) => !v)} style={styles.row}>
-            <Text style={[styles.cardTitle, { color: palette.text }]}>Google Calendar</Text>
+        <GlassCard compact contentStyle={styles.importCard}>
+          <Pressable onPress={() => setShowGoogleImport((v) => !v)} style={styles.importHeader}>
+            <Text style={[styles.formTitle, { color: palette.text }]}>Google Calendar</Text>
             <Text style={{ color: palette.tint, fontWeight: '600' }}>{showGoogleImport ? 'Hide' : 'Show'}</Text>
           </Pressable>
           {showGoogleImport ? (
             <>
-              <Text style={[styles.helper, { color: palette.muted }]}>{describeCalendarAccess()}</Text>
+              <Text style={[styles.empty, { color: palette.muted }]}>{describeCalendarAccess()}</Text>
               <Button
-                title={loadingCalendar ? 'Loading events...' : 'Refresh calendar events'}
+                title={loadingCalendar ? 'Loading...' : 'Import events'}
                 variant="secondary"
                 onPress={loadCalendarEvents}
               />
-              {calendarEvents.length === 0 ? (
-                <Text style={[styles.helper, { color: palette.muted }]}>No upcoming events found.</Text>
-              ) : (
-                calendarEvents.slice(0, 10).map((event) => (
-                  <View key={event.externalId} style={styles.importRow}>
-                    <View style={styles.textBlock}>
-                      <Text style={styles.itemTitle}>{event.title}</Text>
-                      <Text style={[styles.meta, { color: palette.muted }]}>
-                        {event.startDate.toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        })}{' '}
-                        · {event.calendarTitle}
-                      </Text>
-                    </View>
-                    <Button title="Add" onPress={() => importCalendarEvent(event)} />
+              {calendarEvents.slice(0, 6).map((event) => (
+                <View key={event.externalId} style={styles.importRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.switchLabel, { color: palette.text }]}>{event.title}</Text>
+                    <Text style={[styles.empty, { color: palette.muted }]}>
+                      {event.startDate.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </Text>
                   </View>
-                ))
-              )}
+                  <Button title="Add" onPress={() => importCalendarEvent(event)} />
+                </View>
+              ))}
             </>
           ) : null}
         </GlassCard>
@@ -318,69 +241,51 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: 120,
   },
-  card: {
+  list: {
     gap: spacing.md,
   },
-  cardTitle: {
+  empty: {
+    ...typography.body,
+    fontSize: 14,
+    paddingHorizontal: spacing.xs,
+  },
+  form: {
+    gap: spacing.md,
+  },
+  formTitle: {
     ...typography.heading,
-    flex: 1,
   },
-  helper: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  eventRow: {
-    gap: 10,
-    marginTop: spacing.md,
-  },
-  importRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: spacing.md,
-  },
-  textBlock: {
-    flex: 1,
-    gap: 4,
-  },
-  itemTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  meta: {
-    fontSize: 14,
-    lineHeight: 20,
+  timeColumn: {
+    gap: spacing.md,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
   },
   switchLabel: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...typography.label,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
   },
-  timeColumn: {
-    gap: 12,
+  importCard: {
+    gap: spacing.md,
+  },
+  importHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  importRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
 });
