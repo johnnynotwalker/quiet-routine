@@ -13,6 +13,7 @@ import {
   applySilenceState,
   buildSilenceState,
   ensureNotificationPermissions,
+  ensureStatusNotification,
   setupNotificationChannel,
 } from '@/lib/silence';
 import {
@@ -100,6 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await syncGeofencing(evaluated.zones);
     await checkCurrentLocationZones();
     await syncEventReminders(evaluated.schedule);
+    await ensureStatusNotification(evaluated.silence);
   }, []);
 
   useEffect(() => {
@@ -129,10 +131,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const interval = setInterval(() => {
       refresh().catch(console.error);
-    }, 30_000);
+    }, 15_000);
 
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
+      if (state === 'active' || state === 'background') {
         refresh().catch(console.error);
       }
     });

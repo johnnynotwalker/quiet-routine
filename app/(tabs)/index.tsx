@@ -32,7 +32,8 @@ export default function HomeScreen() {
         <View style={[styles.notice, { backgroundColor: palette.accent, borderColor: palette.border }]}>
           <Text style={styles.noticeTitle}>Status notification</Text>
           <Text style={[styles.meta, { color: palette.muted }]}>
-            A persistent notification shows whether you should be in silence mode right now.
+            A persistent notification stays in your notification shade and comes back if removed. On
+            Android it cannot be swiped away; on iPhone it reappears when you open the app.
           </Text>
         </View>
 

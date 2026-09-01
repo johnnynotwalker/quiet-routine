@@ -57,7 +57,7 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
     },
     {
       title: 'Status notifications',
-      body: 'A persistent notification on your lock screen and home screen shows whether your phone is silenced or not, with the QuietRoutine icon.',
+      body: 'A persistent notification stays in your notification shade and reappears if removed. On Android it cannot be swiped away.',
       action: 'Allow notifications',
       onPress: requestNotifications,
       granted: notificationGranted,
