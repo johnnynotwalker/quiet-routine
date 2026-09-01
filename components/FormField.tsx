@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, View } from 'react-native';
 import Colors from '@/constants/Colors';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
+import { radius, spacing } from '@/constants/theme';
 
 type Props = {
   label: string;
@@ -35,7 +36,7 @@ export default function FormField({
           styles.input,
           {
             color: palette.text,
-            backgroundColor: palette.card,
+            backgroundColor: palette.glass,
             borderColor: palette.border,
           },
         ]}
@@ -46,7 +47,7 @@ export default function FormField({
 
 const styles = StyleSheet.create({
   field: {
-    gap: 8,
+    gap: spacing.sm,
   },
   label: {
     fontSize: 14,
@@ -54,9 +55,9 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg - 2,
+    paddingVertical: spacing.md,
     fontSize: 16,
   },
 });

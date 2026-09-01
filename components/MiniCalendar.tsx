@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -11,6 +12,7 @@ import {
   todayParts,
   toIsoDate,
 } from '@/lib/calendar-ui';
+import { spacing, typography } from '@/constants/theme';
 
 type Props = {
   year: number;
@@ -35,22 +37,22 @@ export default function MiniCalendar({
   const cells = buildMonthGrid(year, month);
 
   return (
-    <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+    <GlassCard contentStyle={styles.card}>
       <View style={styles.header}>
         <Pressable
           onPress={() => {
             const prev = shiftMonth(year, month, -1);
             onMonthChange(prev.year, prev.month);
           }}>
-          <Text style={styles.nav}>‹</Text>
+          <Text style={[styles.nav, { color: palette.tint }]}>‹</Text>
         </Pressable>
-        <Text style={styles.month}>{monthLabel(year, month)}</Text>
+        <Text style={[styles.month, { color: palette.text }]}>{monthLabel(year, month)}</Text>
         <Pressable
           onPress={() => {
             const next = shiftMonth(year, month, 1);
             onMonthChange(next.year, next.month);
           }}>
-          <Text style={styles.nav}>›</Text>
+          <Text style={[styles.nav, { color: palette.tint }]}>›</Text>
         </Pressable>
       </View>
 
@@ -93,16 +95,14 @@ export default function MiniCalendar({
           );
         })}
       </View>
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 14,
-    gap: 10,
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
   },
   header: {
     flexDirection: 'row',
@@ -112,11 +112,10 @@ const styles = StyleSheet.create({
   nav: {
     fontSize: 28,
     fontWeight: '600',
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
   },
   month: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...typography.heading,
   },
   weekRow: {
     flexDirection: 'row',
@@ -138,9 +137,9 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   dayBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },

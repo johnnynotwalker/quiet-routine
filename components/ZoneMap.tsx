@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import MapView, { Circle, Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
+import Chip from '@/components/Chip';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getCurrentCoordinates, watchCurrentLocation } from '@/lib/geofencing';
 import { LatLng, RADIUS_PRESETS, ZoneShape } from '@/lib/types';
+import { radius as radii, spacing } from '@/constants/theme';
 
 type Props = {
   shape: ZoneShape;
@@ -103,7 +105,7 @@ export default function ZoneMap({
               center={center}
               radius={radius}
               strokeColor={palette.tint}
-              fillColor="rgba(91, 95, 199, 0.18)"
+              fillColor="rgba(56, 189, 248, 0.18)"
               strokeWidth={2}
             />
           </>
@@ -124,16 +126,15 @@ export default function ZoneMap({
       </MapView>
 
       {shape === 'radius' ? (
-        <View style={[styles.overlay, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.overlayTitle}>Silence radius</Text>
+        <View style={[styles.overlay, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+          <Text style={[styles.overlayTitle, { color: palette.text }]}>Silence radius</Text>
           <View style={styles.presets}>
             {RADIUS_PRESETS.map((preset) => (
-              <PresetChip
+              <Chip
                 key={preset}
                 label={`${preset}m`}
                 active={radius === preset}
                 onPress={() => onRadiusChange(preset)}
-                palette={palette}
               />
             ))}
           </View>
@@ -142,7 +143,7 @@ export default function ZoneMap({
             <TextInput
               style={[
                 styles.customInput,
-                { borderColor: palette.border, color: palette.text, backgroundColor: palette.background },
+                { borderColor: palette.border, color: palette.text, backgroundColor: palette.glass },
               ]}
               keyboardType="numeric"
               placeholder="e.g. 25"
@@ -163,8 +164,8 @@ export default function ZoneMap({
           </Text>
         </View>
       ) : (
-        <View style={[styles.overlay, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.overlayTitle}>Draw your zone</Text>
+        <View style={[styles.overlay, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+          <Text style={[styles.overlayTitle, { color: palette.text }]}>Draw your zone</Text>
           <Text style={[styles.hint, { color: palette.muted }]}>
             Tap points on the map to outline the area. Add at least 3 points.
           </Text>
@@ -186,38 +187,12 @@ export default function ZoneMap({
   );
 }
 
-function PresetChip({
-  label,
-  active,
-  onPress,
-  palette,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  palette: (typeof Colors)['light'];
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        {
-          backgroundColor: active ? palette.tint : palette.card,
-          borderColor: palette.border,
-        },
-      ]}>
-      <Text style={{ color: active ? '#FFF' : palette.text, fontWeight: '600' }}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   wrapper: {
-    borderRadius: 18,
+    borderRadius: radii.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#D7DBE7',
+    borderColor: 'rgba(148, 163, 184, 0.22)',
   },
   map: {
     width: '100%',
@@ -254,12 +229,6 @@ const styles = StyleSheet.create({
     minWidth: 72,
     fontSize: 15,
     fontWeight: '600',
-  },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
   },
   hint: {
     fontSize: 13,

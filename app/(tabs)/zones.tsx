@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
+import AppSwitch from '@/components/AppSwitch';
 import Button from '@/components/Button';
+import Chip from '@/components/Chip';
 import FormField from '@/components/FormField';
+import GlassCard from '@/components/GlassCard';
 import Screen from '@/components/Screen';
 import ZoneMap from '@/components/ZoneMap';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { polygonCentroid } from '@/lib/polygon';
 import { createId } from '@/lib/time';
@@ -40,10 +44,7 @@ export default function ZonesScreen() {
       return;
     }
 
-    const zoneCenter =
-      shape === 'radius' && center
-        ? center
-        : polygonCentroid(polygon);
+    const zoneCenter = shape === 'radius' && center ? center : polygonCentroid(polygon);
 
     const zone: SilentZone = {
       id: createId('zone'),
@@ -71,27 +72,15 @@ export default function ZonesScreen() {
   };
 
   return (
-    <Screen
-      title="Silent zones"
-      subtitle="Use the live map to draw a zone or set any radius from your location.">
+    <Screen title="Silent zones" subtitle="Draw a bubble on the map or set a custom radius.">
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.cardTitle}>Zone type</Text>
+        <GlassCard contentStyle={styles.card}>
+          <Text style={[styles.cardTitle, { color: palette.text }]}>Zone type</Text>
           <View style={styles.shapeRow}>
-            <ShapeChip
-              label="Radius from location"
-              active={shape === 'radius'}
-              onPress={() => setShape('radius')}
-              palette={palette}
-            />
-            <ShapeChip
-              label="Draw on map"
-              active={shape === 'polygon'}
-              onPress={() => setShape('polygon')}
-              palette={palette}
-            />
+            <Chip label="Radius" active={shape === 'radius'} onPress={() => setShape('radius')} />
+            <Chip label="Draw on map" active={shape === 'polygon'} onPress={() => setShape('polygon')} />
           </View>
-        </View>
+        </GlassCard>
 
         <ZoneMap
           shape={shape}
@@ -102,12 +91,12 @@ export default function ZonesScreen() {
           onCenterChange={setCenter}
         />
 
-        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.cardTitle}>Save zone</Text>
+        <GlassCard contentStyle={styles.card}>
+          <Text style={[styles.cardTitle, { color: palette.text }]}>Save zone</Text>
           <FormField label="Place name" value={name} onChangeText={setName} placeholder="Library, office, gym..." />
           {shape === 'radius' ? (
             <Text style={[styles.meta, { color: palette.muted }]}>
-              Current radius: {radius}m {radius < 100 ? '(uses live GPS for small zones)' : '(uses geofencing)'}
+              Current radius: {radius}m {radius < 100 ? '(live GPS)' : '(geofencing)'}
             </Text>
           ) : (
             <Text style={[styles.meta, { color: palette.muted }]}>
@@ -115,30 +104,28 @@ export default function ZonesScreen() {
             </Text>
           )}
           <Button title="Save silent zone" onPress={addZone} />
-        </View>
+        </GlassCard>
 
         {data.zones.length === 0 ? (
           <Text style={[styles.empty, { color: palette.muted }]}>
-            No zones yet. Draw your classroom, office, or a tight 1m bubble around your desk.
+            No zones yet. Draw your classroom, office, or a tight bubble around your desk.
           </Text>
         ) : (
           data.zones.map((zone) => (
-            <View
-              key={zone.id}
-              style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+            <GlassCard key={zone.id} contentStyle={styles.card}>
               <View style={styles.zoneHeader}>
                 <View style={styles.zoneText}>
-                  <Text style={styles.zoneName}>{zone.name}</Text>
+                  <Text style={[styles.zoneName, { color: palette.text }]}>{zone.name}</Text>
                   <Text style={[styles.meta, { color: palette.muted }]}>
                     {zone.shape === 'polygon'
                       ? `Drawn zone · ${zone.polygon?.length ?? 0} points`
                       : `${zone.radius}m radius`}
                   </Text>
                 </View>
-                <Switch value={zone.enabled} onValueChange={(value) => toggleZone(zone.id, value)} />
+                <AppSwitch value={zone.enabled} onValueChange={(value) => toggleZone(zone.id, value)} />
               </View>
               <Button title="Remove zone" variant="danger" onPress={() => removeZone(zone.id)} />
-            </View>
+            </GlassCard>
           ))
         )}
       </ScrollView>
@@ -146,63 +133,27 @@ export default function ZonesScreen() {
   );
 }
 
-function ShapeChip({
-  label,
-  active,
-  onPress,
-  palette,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  palette: (typeof Colors)['light'];
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.shapeChip,
-        {
-          backgroundColor: active ? palette.tint : palette.card,
-          borderColor: palette.border,
-        },
-      ]}>
-      <Text style={{ color: active ? '#FFF' : palette.text, fontWeight: '600', fontSize: 13 }}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   content: {
-    gap: 16,
-    paddingBottom: 32,
+    gap: spacing.lg,
+    paddingBottom: 120,
   },
   card: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-    gap: 12,
+    gap: spacing.md,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.heading,
   },
   shapeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-  },
-  shapeChip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: spacing.sm,
   },
   zoneHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
   },
   zoneText: {
     flex: 1,
@@ -213,11 +164,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   meta: {
-    fontSize: 13,
-    lineHeight: 18,
+    ...typography.caption,
   },
   empty: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
   },
 });

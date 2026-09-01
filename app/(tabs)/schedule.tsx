@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import AppSwitch from '@/components/AppSwitch';
 import Button from '@/components/Button';
+import Chip from '@/components/Chip';
 import FormField from '@/components/FormField';
+import GlassCard from '@/components/GlassCard';
 import MiniCalendar from '@/components/MiniCalendar';
 import Screen from '@/components/Screen';
 import TimePickerField from '@/components/TimePickerField';
@@ -20,6 +23,7 @@ import {
 import { parseIsoDate, todayParts } from '@/lib/calendar-ui';
 import { getEffectiveEndTime } from '@/lib/schedule';
 import { createId, formatDurationBetween, formatTimeLabel, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
+import { spacing, typography } from '@/constants/theme';
 import { ScheduledSilence } from '@/lib/types';
 
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
@@ -170,7 +174,7 @@ export default function ScheduleScreen() {
     <Screen
       title="Calendar"
       subtitle="Mini calendar with event alarms and optional Google Calendar import.">
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <MiniCalendar
           year={year}
           month={month}
@@ -180,9 +184,9 @@ export default function ScheduleScreen() {
           onSelectDate={handleSelectDate}
         />
 
-        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <GlassCard contentStyle={styles.card}>
           <View style={styles.row}>
-            <Text style={styles.cardTitle}>{selectedLabel}</Text>
+            <Text style={[styles.cardTitle, { color: palette.text }]}>{selectedLabel}</Text>
             <Button title={showAddForm ? 'Cancel' : 'Add event'} onPress={() => setShowAddForm((v) => !v)} />
           </View>
 
@@ -194,9 +198,9 @@ export default function ScheduleScreen() {
             eventsForSelectedDay.map((meeting) => {
               const effectiveEnd = getEffectiveEndTime(meeting);
               return (
-                <View key={meeting.id} style={[styles.eventRow, { borderColor: palette.border }]}>
+                <View key={meeting.id} style={styles.eventRow}>
                   <View style={styles.textBlock}>
-                    <Text style={styles.itemTitle}>{meeting.title}</Text>
+                    <Text style={[styles.itemTitle, { color: palette.text }]}>{meeting.title}</Text>
                     <Text style={[styles.meta, { color: palette.muted }]}>
                       {formatTimeLabel(meeting.startTime)} – {formatTimeLabel(effectiveEnd)}
                       {!meeting.useCalendarEnd ? ' (custom end)' : ''}
@@ -207,17 +211,17 @@ export default function ScheduleScreen() {
                       {meeting.source === 'google' ? ' · Google' : ''}
                     </Text>
                   </View>
-                  <Switch value={meeting.enabled} onValueChange={(value) => toggleMeeting(meeting.id, value)} />
+                  <AppSwitch value={meeting.enabled} onValueChange={(value) => toggleMeeting(meeting.id, value)} />
                   <Button title="Remove" variant="danger" onPress={() => removeMeeting(meeting.id)} />
                 </View>
               );
             })
           )}
-        </View>
+        </GlassCard>
 
         {showAddForm ? (
-          <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-            <Text style={styles.cardTitle}>New event on {selectedDate}</Text>
+          <GlassCard contentStyle={styles.card}>
+            <Text style={[styles.cardTitle, { color: palette.text }]}>New event on {selectedDate}</Text>
             <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Class, meeting, focus..." />
 
             <Text style={[styles.label, { color: palette.muted }]}>Event time</Text>
@@ -234,7 +238,7 @@ export default function ScheduleScreen() {
                 <Text style={styles.switchLabel}>Use event end time</Text>
                 <Text style={[styles.meta, { color: palette.muted }]}>Turn off to set a custom silence end.</Text>
               </View>
-              <Switch value={useCalendarEnd} onValueChange={setUseCalendarEnd} />
+              <AppSwitch value={useCalendarEnd} onValueChange={setUseCalendarEnd} />
             </View>
 
             {!useCalendarEnd ? (
@@ -247,29 +251,15 @@ export default function ScheduleScreen() {
             </Text>
             <View style={styles.chipRow}>
               {REMINDER_PRESETS.map((preset) => (
-                <Pressable
+                <Chip
                   key={preset}
+                  label={preset === 0 ? 'Off' : `${preset}m`}
+                  active={reminderMinutes === preset && !customReminder}
                   onPress={() => {
                     setReminderMinutes(preset);
                     setCustomReminder('');
                   }}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor:
-                        reminderMinutes === preset && !customReminder ? palette.tint : palette.card,
-                      borderColor: palette.border,
-                    },
-                  ]}>
-                  <Text
-                    style={{
-                      color: reminderMinutes === preset && !customReminder ? '#FFF' : palette.text,
-                      fontWeight: '600',
-                      fontSize: 13,
-                    }}>
-                    {preset === 0 ? 'Off' : `${preset}m`}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </View>
             <FormField
@@ -281,10 +271,10 @@ export default function ScheduleScreen() {
             />
 
             <Button title="Save event" onPress={addMeeting} />
-          </View>
+          </GlassCard>
         ) : null}
 
-        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <GlassCard contentStyle={styles.card}>
           <Pressable onPress={() => setShowGoogleImport((v) => !v)} style={styles.row}>
             <Text style={styles.cardTitle}>Google Calendar</Text>
             <Text style={{ color: palette.tint, fontWeight: '600' }}>{showGoogleImport ? 'Hide' : 'Show'}</Text>
@@ -301,7 +291,7 @@ export default function ScheduleScreen() {
                 <Text style={[styles.helper, { color: palette.muted }]}>No upcoming events found.</Text>
               ) : (
                 calendarEvents.slice(0, 10).map((event) => (
-                  <View key={event.externalId} style={[styles.importRow, { borderColor: palette.border }]}>
+                  <View key={event.externalId} style={styles.importRow}>
                     <View style={styles.textBlock}>
                       <Text style={styles.itemTitle}>{event.title}</Text>
                       <Text style={[styles.meta, { color: palette.muted }]}>
@@ -320,7 +310,7 @@ export default function ScheduleScreen() {
               )}
             </>
           ) : null}
-        </View>
+        </GlassCard>
       </ScrollView>
     </Screen>
   );
@@ -328,18 +318,14 @@ export default function ScheduleScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    gap: 16,
-    paddingBottom: 32,
+    gap: spacing.lg,
+    paddingBottom: 120,
   },
   card: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
-    gap: 12,
+    gap: spacing.md,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...typography.heading,
     flex: 1,
   },
   helper: {
@@ -358,16 +344,14 @@ const styles = StyleSheet.create({
   },
   eventRow: {
     gap: 10,
-    borderTopWidth: 1,
-    paddingTop: 12,
+    marginTop: spacing.md,
   },
   importRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    borderTopWidth: 1,
-    paddingTop: 12,
+    marginTop: spacing.md,
   },
   textBlock: {
     flex: 1,
@@ -395,12 +379,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   timeColumn: {
     gap: 12,

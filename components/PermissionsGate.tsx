@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Image, Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import Button from '@/components/Button';
+import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { describeCalendarAccess, requestCalendarPermissions } from '@/lib/calendar';
 import { requestLocationPermissions } from '@/lib/geofencing';
 import { isExpoGo } from '@/lib/platform';
+import { spacing, typography } from '@/constants/theme';
 import {
   canShowOnLockScreen,
   getStatusNotificationPermissions,
@@ -108,18 +111,22 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <LinearGradient
+        colors={[palette.background, palette.backgroundAlt, palette.background]}
+        style={StyleSheet.absoluteFill}
+      />
       <ScrollView
-        contentContainerStyle={[styles.container, { backgroundColor: palette.background }]}
+        contentContainerStyle={[styles.container, { backgroundColor: 'transparent' }]}
         showsVerticalScrollIndicator={false}>
         <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-        <Text style={styles.brand}>QuietRoutine</Text>
+        <Text style={[styles.brand, { color: palette.text }]}>QuietRoutine</Text>
         <Text style={[styles.tagline, { color: palette.muted }]}>
-          See silence status on your lock screen — with just notification permission.
+          Calm, glass-clear silence on your lock screen.
         </Text>
 
-        <View style={[styles.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
-          <Text style={styles.stepLabel}>Step {step + 1} of {steps.length}</Text>
-          <Text style={styles.title}>{current.title}</Text>
+        <GlassCard contentStyle={styles.card}>
+          <Text style={[styles.stepLabel, { color: palette.tint }]}>Step {step + 1} of {steps.length}</Text>
+          <Text style={[styles.title, { color: palette.text }]}>{current.title}</Text>
           <Text style={[styles.body, { color: palette.muted }]}>{current.body}</Text>
           {current.grantedLabel ? (
             <Text style={[styles.granted, { color: palette.success }]}>{current.grantedLabel}</Text>
@@ -130,7 +137,7 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
           {current.skip && current.onSkip ? (
             <Button title={current.skip} variant="secondary" onPress={current.onSkip} />
           ) : null}
-        </View>
+        </GlassCard>
 
         <View style={styles.progressRow}>
           {steps.map((item, index) => (
@@ -165,8 +172,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   brand: {
-    fontSize: 28,
-    fontWeight: '800',
+    ...typography.hero,
     textAlign: 'center',
   },
   tagline: {
@@ -176,10 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   card: {
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
-    gap: 12,
+    gap: spacing.md,
   },
   stepLabel: {
     fontSize: 13,
@@ -188,8 +191,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
+    ...typography.title,
   },
   body: {
     fontSize: 15,

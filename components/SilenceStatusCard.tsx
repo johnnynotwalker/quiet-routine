@@ -1,8 +1,10 @@
 import { StyleSheet, View } from 'react-native';
 
-import Colors from '@/constants/Colors';
+import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/Themed';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, typography } from '@/constants/theme';
 import { SilenceState } from '@/lib/types';
 
 type Props = {
@@ -28,49 +30,36 @@ export default function SilenceStatusCard({ silence }: Props) {
   })();
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: silence.isSilenced ? palette.accent : palette.card,
-          borderColor: silence.isSilenced ? palette.tint : palette.border,
-        },
-      ]}>
+    <GlassCard highlighted={silence.isSilenced} contentStyle={styles.card}>
       <View style={styles.row}>
         <View
           style={[
             styles.dot,
-            { backgroundColor: silence.isSilenced ? palette.tint : palette.success },
+            { backgroundColor: silence.isSilenced ? palette.tint : palette.switchOff },
           ]}
         />
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: palette.text }]}>
           {silence.isSilenced ? 'Silence mode active' : 'Not in silence mode'}
         </Text>
       </View>
       <Text style={[styles.subtitle, { color: palette.muted }]}>{reasonLabel}</Text>
-      <Text style={[styles.note, { color: palette.muted }]}>
-        QuietRoutine tracks when you should be quiet. In Expo Go it cannot flip the physical ringer switch.
-      </Text>
       {silence.until ? (
         <Text style={[styles.until, { color: palette.muted }]}>
           Until {new Date(silence.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
         </Text>
       ) : null}
-    </View>
+    </GlassCard>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    gap: 8,
+    gap: spacing.sm,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.md,
   },
   dot: {
     width: 10,
@@ -78,19 +67,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   title: {
+    ...typography.title,
     fontSize: 20,
-    fontWeight: '700',
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
   },
   until: {
-    fontSize: 14,
-  },
-  note: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 4,
+    ...typography.caption,
   },
 });

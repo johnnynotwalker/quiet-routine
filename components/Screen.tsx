@@ -1,9 +1,12 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Colors from '@/constants/Colors';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, typography } from '@/constants/theme';
 
 type Props = {
   title: string;
@@ -17,41 +20,57 @@ export default function Screen({ title, subtitle, action, children }: Props) {
   const palette = Colors[colorScheme];
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={[styles.subtitle, { color: palette.muted }]}>{subtitle}</Text> : null}
+    <View style={styles.root}>
+      <LinearGradient
+        colors={[palette.background, palette.backgroundAlt, palette.background]}
+        locations={[0, 0.45, 1]}
+        style={StyleSheet.absoluteFill}
+      />
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
+              {subtitle ? (
+                <Text style={[styles.subtitle, { color: palette.muted }]}>{subtitle}</Text>
+              ) : null}
+            </View>
+            {action}
+          </View>
+          {children}
         </View>
-        {action}
-      </View>
-      {children}
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  safe: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: spacing.screen,
+    gap: spacing.lg,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
+    paddingTop: spacing.sm,
   },
   headerText: {
     flex: 1,
-    gap: 4,
+    gap: spacing.xs,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
+    ...typography.hero,
   },
   subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
   },
 });
