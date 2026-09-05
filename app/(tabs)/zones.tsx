@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Clock, MapPin, type LucideIcon } from 'lucide-react-native';
 
 import Button from '@/components/Button';
 import Chip from '@/components/Chip';
@@ -9,7 +9,7 @@ import GlassBottomSheet from '@/components/GlassBottomSheet';
 import Screen from '@/components/Screen';
 import ZoneMap from '@/components/ZoneMap';
 import { Text } from '@/components/Themed';
-import Colors from '@/constants/Colors';
+import Colors, { type ThemeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useApp } from '@/context/AppContext';
 import { polygonCentroid } from '@/lib/polygon';
@@ -18,20 +18,23 @@ import { spacing, typography } from '@/constants/theme';
 import { LatLng, RADIUS_PRESETS, SilentZone, ZoneShape } from '@/lib/types';
 
 function SheetStat({
-  icon,
+  icon: Icon,
   label,
   accent,
   palette,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: LucideIcon;
   label: string;
   accent?: string;
-  palette: (typeof Colors)['light'];
+  palette: ThemeColors;
 }) {
+  const color = accent ?? palette.muted;
   return (
     <View style={styles.stat}>
-      <Ionicons name={icon} size={14} color={accent ?? palette.muted} />
-      <Text style={[styles.statText, { color: accent ?? palette.muted }]}>{label}</Text>
+      {Icon ? <Icon size={14} color={color} strokeWidth={1.75} /> : (
+        <View style={[styles.dot, { backgroundColor: color }]} />
+      )}
+      <Text style={[styles.statText, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -138,13 +141,12 @@ export default function ZonesScreen() {
               {activeZone ? (
                 <View style={styles.statsRow}>
                   <SheetStat
-                    icon="ellipse"
                     label={activeZone.enabled ? 'Active' : 'Inactive'}
-                    accent={activeZone.enabled ? '#34D399' : palette.muted}
+                    accent={activeZone.enabled ? palette.success : palette.muted}
                     palette={palette}
                   />
                   <SheetStat
-                    icon="resize-outline"
+                    icon={MapPin}
                     label={
                       activeZone.shape === 'polygon'
                         ? `${activeZone.polygon?.length ?? 0} pts`
@@ -152,7 +154,7 @@ export default function ZonesScreen() {
                     }
                     palette={palette}
                   />
-                  <SheetStat icon="time-outline" label="Strict" palette={palette} />
+                  <SheetStat icon={Clock} label="Strict" palette={palette} />
                 </View>
               ) : (
                 <Text style={[styles.sheetMeta, { color: palette.muted }]}>
@@ -177,6 +179,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     ...typography.heading,
     fontSize: 20,
+    fontWeight: '700',
   },
   sheetMeta: {
     ...typography.body,
@@ -192,6 +195,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   statText: {
     fontSize: 13,
     fontWeight: '600',
@@ -199,5 +207,6 @@ const styles = StyleSheet.create({
   shapeRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+    flexWrap: 'wrap',
   },
 });

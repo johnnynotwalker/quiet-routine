@@ -1,5 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
-import { ComponentProps } from 'react';
+import { Crosshair, Moon, Sun } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import AppSwitch from '@/components/AppSwitch';
@@ -10,34 +9,37 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, typography } from '@/constants/theme';
 import { formatTimeLabel } from '@/lib/time';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
-
 type Props = {
   title: string;
   startTime: string;
   endTime: string;
   enabled: boolean;
-  icon?: IconName;
   onToggle: (enabled: boolean) => void;
-  onRemove?: () => void;
 };
+
+function eventIcon(title: string) {
+  const lower = title.toLowerCase();
+  if (lower.includes('focus')) return Crosshair;
+  if (lower.includes('quiet') || lower.includes('evening') || lower.includes('night')) return Moon;
+  return Sun;
+}
 
 export default function ScheduleEventRow({
   title,
   startTime,
   endTime,
   enabled,
-  icon = 'radio-button-on-outline',
   onToggle,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const Icon = eventIcon(title);
 
   return (
     <GlassCard compact contentStyle={styles.card}>
       <View style={styles.row}>
-        <View style={[styles.iconWrap, { backgroundColor: palette.accent }]}>
-          <Ionicons name={icon} size={20} color={palette.tint} />
+        <View style={[styles.iconWrap, { backgroundColor: palette.iceTint }]}>
+          <Icon size={20} color={palette.tint} strokeWidth={1.75} />
         </View>
         <View style={styles.text}>
           <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
@@ -62,9 +64,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -78,5 +80,6 @@ const styles = StyleSheet.create({
   },
   time: {
     ...typography.caption,
+    letterSpacing: 0,
   },
 });

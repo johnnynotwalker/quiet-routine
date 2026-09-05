@@ -12,6 +12,8 @@ type Props = {
   contentStyle?: ViewStyle;
   highlighted?: boolean;
   compact?: boolean;
+  /** Solid white card — required over maps. */
+  solid?: boolean;
 };
 
 export default function GlassCard({
@@ -20,29 +22,30 @@ export default function GlassCard({
   contentStyle,
   highlighted = false,
   compact = false,
+  solid = false,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+
+  const borderColor = highlighted ? 'rgba(56, 189, 248, 0.45)' : palette.border;
+  const fill = highlighted ? 'rgba(224, 242, 254, 0.85)' : solid ? palette.card : palette.glassInner;
 
   const inner = (
     <View
       style={[
         styles.inner,
         compact && styles.innerCompact,
-        {
-          borderColor: highlighted ? 'rgba(56, 189, 248, 0.55)' : palette.glassBorder,
-          backgroundColor: highlighted ? 'rgba(56, 189, 248, 0.1)' : palette.glassInner,
-        },
+        { borderColor, backgroundColor: fill },
         contentStyle,
       ]}>
       {children}
     </View>
   );
 
-  if (Platform.OS === 'ios') {
+  if (!solid && Platform.OS === 'ios') {
     return (
       <View style={[styles.shadow, style]}>
-        <BlurView intensity={50} tint="light" style={styles.blur}>
+        <BlurView intensity={28} tint="light" style={styles.blur}>
           {inner}
         </BlurView>
       </View>
@@ -50,7 +53,7 @@ export default function GlassCard({
   }
 
   return (
-    <View style={[styles.shadow, styles.fallback, { backgroundColor: palette.glass, borderColor: palette.glassBorder }, style]}>
+    <View style={[styles.shadow, styles.fallback, { backgroundColor: palette.card, borderColor }, style]}>
       {inner}
     </View>
   );
@@ -58,23 +61,23 @@ export default function GlassCard({
 
 const styles = StyleSheet.create({
   shadow: {
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadow.card,
   },
   blur: {
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     overflow: 'hidden',
   },
   fallback: {
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
   },
   inner: {
-    padding: spacing.xxl,
+    padding: spacing.xl,
     gap: spacing.md,
     borderWidth: 1,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
   },
   innerCompact: {
     padding: spacing.lg,

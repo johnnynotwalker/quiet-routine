@@ -1,11 +1,13 @@
+import { tokens } from './Colors';
+
 export const spacing = {
   xs: 4,
   sm: 8,
   md: 12,
   lg: 16,
-  xl: 20,
-  xxl: 24,
-  screen: 20,
+  xl: 24,
+  xxl: 32,
+  screen: 24,
 } as const;
 
 export const radius = {
@@ -13,44 +15,53 @@ export const radius = {
   md: 16,
   lg: 20,
   xl: 24,
+  button: 28,
   pill: 999,
 } as const;
 
 export const shadow = {
   card: {
-    shadowColor: 'rgba(15, 23, 42, 0.14)',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 6,
   },
   soft: {
-    shadowColor: 'rgba(15, 23, 42, 0.1)',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
-    elevation: 2,
+    elevation: 3,
+  },
+  button: {
+    shadowColor: tokens.skyAccent,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
   },
   glow: {
-    shadowColor: 'rgba(56, 189, 248, 0.45)',
+    shadowColor: tokens.skyAccent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
     elevation: 0,
   },
 } as const;
 
 export const switchColors = {
-  on: '#38BDF8',
+  on: tokens.skyAccent,
   off: '#CBD5E1',
   thumb: '#FFFFFF',
 } as const;
 
 export const typography = {
+  display: { fontSize: 34, fontWeight: '600' as const, letterSpacing: -0.8 },
   hero: { fontSize: 34, fontWeight: '600' as const, letterSpacing: -0.8 },
   title: { fontSize: 24, fontWeight: '700' as const, letterSpacing: -0.4 },
-  heading: { fontSize: 18, fontWeight: '600' as const },
+  heading: { fontSize: 18, fontWeight: '500' as const, letterSpacing: -0.2 },
   body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 22 },
-  caption: { fontSize: 13, fontWeight: '500' as const, lineHeight: 18 },
+  caption: { fontSize: 12, fontWeight: '500' as const, lineHeight: 16 },
   label: { fontSize: 14, fontWeight: '600' as const },
 };

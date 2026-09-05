@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Volume2, VolumeX } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import Button from '@/components/Button';
@@ -26,6 +26,7 @@ export default function StatusHeroCard({
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const Icon = silence.isSilenced ? VolumeX : Volume2;
 
   const detail = (() => {
     if (!silence.isSilenced || !silence.reason) return 'Tap below when you need quiet focus';
@@ -44,12 +45,8 @@ export default function StatusHeroCard({
   return (
     <GlassCard highlighted={silence.isSilenced} contentStyle={styles.card}>
       <View style={styles.top}>
-        <View style={[styles.iconBubble, { backgroundColor: palette.accent }]}>
-          <Ionicons
-            name={silence.isSilenced ? 'volume-mute' : 'volume-medium'}
-            size={26}
-            color={palette.tint}
-          />
+        <View style={[styles.iconBubble, { backgroundColor: palette.iceTint }]}>
+          <Icon size={26} color={palette.tint} strokeWidth={1.75} />
         </View>
         <View style={styles.text}>
           <Text style={[styles.title, { color: palette.text }]}>
@@ -87,6 +84,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.heading,
     fontSize: 20,
+    fontWeight: '600',
   },
   detail: {
     ...typography.body,

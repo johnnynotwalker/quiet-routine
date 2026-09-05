@@ -1,7 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { ComponentProps } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
 import { GlowTabIcon } from '@/components/GlowTabIcon';
@@ -10,11 +8,9 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { radius, shadow } from '@/constants/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
-
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme];
+  const palette = Colors[colorScheme ?? 'light'];
 
   return (
     <Tabs
@@ -32,13 +28,13 @@ export default function TabLayout() {
           borderTopWidth: 0,
           borderWidth: 1,
           borderColor: palette.glassBorder,
-          backgroundColor: palette.glass,
+          backgroundColor: palette.card,
           ...shadow.card,
           overflow: 'hidden',
         },
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
-            <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={36} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
         headerShown: useClientOnlyValue(false, true),
       }}>
@@ -47,7 +43,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <GlowTabIcon name={focused ? 'home' : 'home-outline'} color={color} focused={focused} />
+            <GlowTabIcon name="home" color={color} focused={focused} />
           ),
         }}
       />
@@ -56,7 +52,7 @@ export default function TabLayout() {
         options={{
           title: 'Calendar',
           tabBarIcon: ({ color, focused }) => (
-            <GlowTabIcon name={focused ? 'calendar' : 'calendar-outline'} color={color} focused={focused} />
+            <GlowTabIcon name="calendar" color={color} focused={focused} />
           ),
         }}
       />
@@ -65,7 +61,7 @@ export default function TabLayout() {
         options={{
           title: 'Zones',
           tabBarIcon: ({ color, focused }) => (
-            <GlowTabIcon name={focused ? 'location' : 'location-outline'} color={color} focused={focused} />
+            <GlowTabIcon name="zones" color={color} focused={focused} />
           ),
         }}
       />

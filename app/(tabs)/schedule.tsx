@@ -1,3 +1,4 @@
+import { Plus, X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -30,12 +31,6 @@ import { ScheduledSilence } from '@/lib/types';
 
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
 
-function scheduleIcon(title: string): 'radio-button-on-outline' | 'moon-outline' | 'sunny-outline' {
-  const lower = title.toLowerCase();
-  if (lower.includes('focus')) return 'radio-button-on-outline';
-  if (lower.includes('quiet') || lower.includes('evening') || lower.includes('night')) return 'moon-outline';
-  return 'sunny-outline';
-}
 
 export default function ScheduleScreen() {
   const { data, setSchedule } = useApp();
@@ -147,7 +142,7 @@ export default function ScheduleScreen() {
       title="Schedule"
       action={
         <HeaderIconButton
-          name={showAddForm ? 'close' : 'add'}
+          icon={showAddForm ? X : Plus}
           onPress={() => setShowAddForm((v) => !v)}
         />
       }>
@@ -167,7 +162,6 @@ export default function ScheduleScreen() {
                 startTime={meeting.startTime}
                 endTime={getEffectiveEndTime(meeting)}
                 enabled={meeting.enabled}
-                icon={scheduleIcon(meeting.title)}
                 onToggle={(value) => toggleMeeting(meeting.id, value)}
               />
             ))

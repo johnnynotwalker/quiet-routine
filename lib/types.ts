@@ -85,6 +85,6 @@ export const DEFAULT_APP_DATA: AppData = {
   settings: DEFAULT_SETTINGS,
 };
 
-export const RADIUS_PRESETS = [1, 10, 100] as const;
+export const RADIUS_PRESETS = [50, 100, 150] as const;
 
 export type RadiusPreset = (typeof RADIUS_PRESETS)[number];

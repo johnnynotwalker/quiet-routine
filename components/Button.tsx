@@ -4,7 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import Colors from '@/constants/Colors';
 import { Text } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
-import { radius, shadow, spacing } from '@/constants/theme';
+import { radius, shadow } from '@/constants/theme';
 import { tapHaptic } from '@/lib/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -37,12 +37,12 @@ export default function Button({
       ? palette.tint
       : variant === 'danger'
         ? 'rgba(251, 113, 133, 0.15)'
-        : palette.glassInner;
+        : palette.card;
 
   const textColor =
     variant === 'primary' ? '#FFFFFF' : variant === 'danger' ? palette.danger : palette.text;
   const borderColor =
-    variant === 'primary' ? palette.tintDeep : variant === 'danger' ? 'rgba(251, 113, 133, 0.35)' : palette.border;
+    variant === 'primary' ? palette.tint : variant === 'danger' ? 'rgba(251, 113, 133, 0.35)' : palette.border;
 
   return (
     <AnimatedPressable
@@ -52,7 +52,7 @@ export default function Button({
         onPress();
       }}
       onPressIn={() => {
-        if (!disabled) scale.value = withSpring(0.96, { damping: 14, stiffness: 340 });
+        if (!disabled) scale.value = withSpring(0.97, { damping: 14, stiffness: 340 });
       }}
       onPressOut={() => {
         scale.value = withSpring(1, { damping: 12, stiffness: 280 });
@@ -60,7 +60,7 @@ export default function Button({
       style={[
         styles.button,
         animatedStyle,
-        shadow.soft,
+        variant === 'primary' ? shadow.button : shadow.soft,
         {
           backgroundColor,
           borderColor,
@@ -75,15 +75,16 @@ export default function Button({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: radius.pill,
-    paddingVertical: spacing.lg - 2,
-    paddingHorizontal: spacing.xl,
+    height: 56,
+    borderRadius: radius.button,
+    paddingHorizontal: 24,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: -0.2,
   },
 });

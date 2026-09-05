@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import MapView, { Circle, Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
-import PulsingMarker from '@/components/PulsingMarker';
 import Chip from '@/components/Chip';
+import ZoneMutePin from '@/components/ZoneMutePin';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -29,6 +29,18 @@ const DEFAULT_REGION: Region = {
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
 };
+
+const LIGHT_MAP_STYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#F8FBFF' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#64748B' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#E2E8F0' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#DBEAFE' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#EFF6FF' }] },
+];
 
 export default function ZoneMap({
   shape,
@@ -78,22 +90,13 @@ export default function ZoneMap({
 
   const handleMapPress = (event: { nativeEvent: { coordinate: LatLng } }) => {
     const point = event.nativeEvent.coordinate;
-
     if (shape === 'radius') {
       setCenter(point);
       onCenterChange(point);
       return;
     }
-
     onPolygonChange([...polygon, point]);
   };
-
-  const undoPoint = () => {
-    if (polygon.length === 0) return;
-    onPolygonChange(polygon.slice(0, -1));
-  };
-
-  const clearPolygon = () => onPolygonChange([]);
 
   return (
     <View style={[styles.wrapper, fullBleed && styles.wrapperFull]}>
@@ -103,19 +106,20 @@ export default function ZoneMap({
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={region}
         showsUserLocation
-        showsMyLocationButton
-        onPress={handleMapPress}>
+        showsMyLocationButton={!fullBleed}
+        onPress={handleMapPress}
+        customMapStyle={LIGHT_MAP_STYLE}>
         {fullBleed
           ? savedZones.map((zone) => {
               const isActive = zone.id === activeZoneId;
               const stroke = isActive ? palette.tint : '#94A3B8';
-              const fill = isActive ? 'rgba(56, 189, 248, 0.22)' : 'rgba(148, 163, 184, 0.14)';
+              const fill = isActive ? 'rgba(56, 189, 248, 0.2)' : 'rgba(148, 163, 184, 0.14)';
               if (zone.shape === 'radius') {
                 return (
                   <Circle
                     key={zone.id}
                     center={{ latitude: zone.latitude, longitude: zone.longitude }}
-                    radius={zone.radius}
+                    radius={Math.max(zone.radius, 1)}
                     strokeColor={stroke}
                     fillColor={fill}
                     strokeWidth={isActive ? 2 : 1}
@@ -136,19 +140,25 @@ export default function ZoneMap({
               return null;
             })
           : null}
+
         {fullBleed
-          ? savedZones.map((zone) => (
-              <Marker
-                key={`marker-${zone.id}`}
-                coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
-                anchor={{ x: 0.5, y: 0.5 }}>
-                <PulsingMarker active={zone.id === activeZoneId} />
-              </Marker>
-            ))
+          ? savedZones.map((zone) => {
+              const isActive = zone.id === activeZoneId;
+              return (
+                <Marker
+                  key={`pin-${zone.id}`}
+                  coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
+                  anchor={{ x: 0.5, y: 1 }}
+                  tracksViewChanges={false}>
+                  <ZoneMutePin name={zone.name} active={isActive} showCurrentPrefix={isActive} />
+                </Marker>
+              );
+            })
           : null}
+
         {center && shape === 'radius' ? (
           <>
-            <Marker coordinate={center} title="Zone center" />
+            {!fullBleed ? <Marker coordinate={center} title="Zone center" /> : null}
             <Circle
               center={center}
               radius={radius}
@@ -158,6 +168,7 @@ export default function ZoneMap({
             />
           </>
         ) : null}
+
         {shape === 'polygon' && polygon.length >= 2 ? (
           <Polygon
             coordinates={polygon}
@@ -174,7 +185,7 @@ export default function ZoneMap({
       </MapView>
 
       {!fullBleed && shape === 'radius' ? (
-        <View style={[styles.overlay, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+        <View style={[styles.overlay, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={[styles.overlayTitle, { color: palette.text }]}>Silence radius</Text>
           <View style={styles.presets}>
             {RADIUS_PRESETS.map((preset) => (
@@ -191,10 +202,10 @@ export default function ZoneMap({
             <TextInput
               style={[
                 styles.customInput,
-                { borderColor: palette.border, color: palette.text, backgroundColor: palette.glass },
+                { borderColor: palette.border, color: palette.text, backgroundColor: palette.card },
               ]}
               keyboardType="numeric"
-              placeholder="e.g. 25"
+              placeholder="e.g. 150"
               placeholderTextColor={palette.muted}
               value={RADIUS_PRESETS.includes(radius as (typeof RADIUS_PRESETS)[number]) ? '' : String(radius)}
               onChangeText={(text) => {
@@ -207,24 +218,21 @@ export default function ZoneMap({
             />
             <Text style={[styles.customLabel, { color: palette.muted }]}>meters</Text>
           </View>
-          <Text style={[styles.hint, { color: palette.muted }]}>
-            Tap the map to move the center. Your live location updates the zone automatically.
-          </Text>
         </View>
       ) : !fullBleed ? (
-        <View style={[styles.overlay, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+        <View style={[styles.overlay, { backgroundColor: palette.card, borderColor: palette.border }]}>
           <Text style={[styles.overlayTitle, { color: palette.text }]}>Draw your zone</Text>
           <Text style={[styles.hint, { color: palette.muted }]}>
             Tap points on the map to outline the area. Add at least 3 points.
           </Text>
           <View style={styles.actions}>
             <Pressable
-              onPress={undoPoint}
+              onPress={() => onPolygonChange(polygon.slice(0, -1))}
               style={[styles.actionButton, { borderColor: palette.border }]}>
-              <Text>Undo point</Text>
+              <Text>Undo</Text>
             </Pressable>
             <Pressable
-              onPress={clearPolygon}
+              onPress={() => onPolygonChange([])}
               style={[styles.actionButton, { borderColor: palette.border }]}>
               <Text>Clear</Text>
             </Pressable>
@@ -256,8 +264,8 @@ const styles = StyleSheet.create({
     height: undefined,
   },
   overlay: {
-    padding: 12,
-    gap: 8,
+    padding: spacing.md,
+    gap: spacing.sm,
     borderTopWidth: 1,
   },
   overlayTitle: {
@@ -266,13 +274,13 @@ const styles = StyleSheet.create({
   },
   presets: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
     flexWrap: 'wrap',
   },
   customRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
   customLabel: {
     fontSize: 13,
@@ -293,7 +301,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   actionButton: {
     borderWidth: 1,

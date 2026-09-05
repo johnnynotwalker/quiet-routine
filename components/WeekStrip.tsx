@@ -1,8 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/Themed';
-import Colors from '@/constants/Colors';
+import Colors, { type ThemeColors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { buildWeekStrip, WeekDay } from '@/lib/calendar-ui';
 import { radius, spacing } from '@/constants/theme';
@@ -48,7 +47,7 @@ function DayPill({
   day: WeekDay;
   selected: boolean;
   marked: boolean;
-  palette: (typeof Colors)['light'];
+  palette: ThemeColors;
   onPress: () => void;
 }) {
   return (
@@ -56,11 +55,16 @@ function DayPill({
       <View
         style={[
           styles.pill,
-          selected && { backgroundColor: palette.tint, borderColor: palette.tintDeep },
-          !selected && { borderColor: palette.border, backgroundColor: palette.glass },
+          selected
+            ? { backgroundColor: palette.iceTint, borderColor: palette.tint }
+            : { backgroundColor: palette.card, borderColor: palette.border },
         ]}>
-        <Text style={[styles.weekday, { color: selected ? '#FFFFFF' : palette.muted }]}>{day.weekday}</Text>
-        <Text style={[styles.dayNum, { color: selected ? '#FFFFFF' : palette.text }]}>{day.day}</Text>
+        <Text style={[styles.weekday, { color: selected ? palette.tintDeep : palette.muted }]}>
+          {day.weekday}
+        </Text>
+        <Text style={[styles.dayNum, { color: selected ? palette.text : palette.text }]}>
+          {day.day}
+        </Text>
       </View>
       {selected || marked ? (
         <View style={[styles.dot, { backgroundColor: selected ? palette.tint : palette.muted }]} />
@@ -81,7 +85,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pill: {
-    width: 54,
+    width: 56,
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
     borderWidth: 1,

@@ -17,8 +17,9 @@ type Props = {
   variant?: HeaderVariant;
   action?: ReactNode;
   children: ReactNode;
-  scroll?: boolean;
   contentStyle?: ViewStyle;
+  /** Hide the gradient canvas (e.g. map screens). */
+  transparent?: boolean;
 };
 
 export default function Screen({
@@ -29,17 +30,20 @@ export default function Screen({
   action,
   children,
   contentStyle,
+  transparent = false,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
   return (
-    <View style={styles.root}>
-      <LinearGradient
-        colors={['#93C5FD', '#BFDBFE', '#DBEAFE', '#EFF6FF']}
-        locations={[0, 0.3, 0.65, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.root, { backgroundColor: transparent ? 'transparent' : palette.background }]}>
+      {!transparent ? (
+        <LinearGradient
+          colors={['#FBFDFF', '#F0F9FF', '#E0F2FE', '#FBFDFF']}
+          locations={[0, 0.35, 0.72, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
         <View style={[styles.container, contentStyle]}>
           <View style={styles.header}>
@@ -48,14 +52,14 @@ export default function Screen({
                 <>
                   <Text style={[styles.greeting, { color: palette.text }]}>{greeting ?? 'Hello'}</Text>
                   {subtitle ? (
-                    <Text style={[styles.greetingSub, { color: palette.muted }]}>{subtitle}</Text>
+                    <Text style={[styles.sub, { color: palette.muted }]}>{subtitle}</Text>
                   ) : null}
                 </>
               ) : (
                 <>
                   <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
                   {subtitle ? (
-                    <Text style={[styles.greetingSub, { color: palette.muted }]}>{subtitle}</Text>
+                    <Text style={[styles.sub, { color: palette.muted }]}>{subtitle}</Text>
                   ) : null}
                 </>
               )}
@@ -93,12 +97,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   greeting: {
-    ...typography.hero,
+    ...typography.display,
   },
   title: {
     ...typography.title,
   },
-  greetingSub: {
+  sub: {
     ...typography.body,
     fontSize: 14,
   },

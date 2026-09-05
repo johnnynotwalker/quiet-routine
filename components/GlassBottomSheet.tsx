@@ -2,23 +2,29 @@ import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radius, spacing } from '@/constants/theme';
-import GlassCard from '@/components/GlassCard';
+import Colors from '@/constants/Colors';
+import { radius, shadow, spacing } from '@/constants/theme';
+import { useColorScheme } from '@/components/useColorScheme';
 
 type Props = {
   children: ReactNode;
   style?: ViewStyle;
 };
 
+/** Solid white bottom sheet — never blur over live maps. */
 export default function GlassBottomSheet({ children, style }: Props) {
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
 
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 12) + 72 }, style]}>
-      <View style={styles.handleRow}>
-        <View style={styles.handle} />
+      <View style={[styles.sheet, shadow.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
+        <View style={styles.handleRow}>
+          <View style={[styles.handle, { backgroundColor: palette.border }]} />
+        </View>
+        {children}
       </View>
-      <GlassCard contentStyle={styles.sheet}>{children}</GlassCard>
     </View>
   );
 }
@@ -30,6 +36,14 @@ const styles = StyleSheet.create({
     right: spacing.screen,
     bottom: 0,
   },
+  sheet: {
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    gap: spacing.lg,
+  },
   handleRow: {
     alignItems: 'center',
     paddingBottom: spacing.sm,
@@ -38,11 +52,5 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(100, 116, 139, 0.45)',
-  },
-  sheet: {
-    borderTopLeftRadius: radius.xl + 4,
-    borderTopRightRadius: radius.xl + 4,
-    gap: spacing.lg,
   },
 });

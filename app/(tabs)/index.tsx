@@ -1,3 +1,4 @@
+import { Bell } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -54,8 +55,7 @@ export default function HomeScreen() {
       .sort((a, b) => a.startTime.localeCompare(b.startTime))[0];
   }, [data.schedule, today]);
 
-  const activeZoneId =
-    data.silence.reason?.type === 'zone' ? data.silence.reason.zoneId : null;
+  const activeZoneId = data.silence.reason?.type === 'zone' ? data.silence.reason.zoneId : null;
   const zoneTiles = data.zones.slice(0, 2);
   const activeZoneName =
     data.silence.reason?.type === 'zone' ? data.silence.reason.zoneName : undefined;
@@ -79,7 +79,7 @@ export default function HomeScreen() {
       variant="greeting"
       greeting="Hello, Alex"
       title=""
-      action={<HeaderIconButton name="notifications-outline" onPress={() => Linking.openSettings()} />}>
+      action={<HeaderIconButton icon={Bell} onPress={() => Linking.openSettings()} />}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <StatusHeroCard
           silence={data.silence}
@@ -95,7 +95,7 @@ export default function HomeScreen() {
           </Text>
           <Text style={[styles.nextMeta, { color: palette.muted }]}>
             {nextEvent
-              ? `${nextEvent.startTime} – ${getEffectiveEndTime(nextEvent)}`
+              ? `${formatTimeLabel(nextEvent.startTime)} – ${formatTimeLabel(getEffectiveEndTime(nextEvent))}`
               : activeMeeting
                 ? `Active now: ${activeMeeting.title}`
                 : 'No upcoming events today'}
