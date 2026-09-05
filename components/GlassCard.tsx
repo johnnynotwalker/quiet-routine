@@ -27,8 +27,9 @@ export default function GlassCard({
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
-  const borderColor = highlighted ? 'rgba(56, 189, 248, 0.45)' : palette.border;
-  const fill = highlighted ? 'rgba(224, 242, 254, 0.85)' : solid ? palette.card : palette.glassInner;
+  // Solid-enough fills so navy text stays readable on the light canvas.
+  const borderColor = highlighted ? 'rgba(56, 189, 248, 0.55)' : 'rgba(148, 163, 184, 0.35)';
+  const fill = highlighted ? 'rgba(224, 242, 254, 0.95)' : solid ? palette.card : 'rgba(255, 255, 255, 0.92)';
 
   const inner = (
     <View

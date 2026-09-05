@@ -5,7 +5,6 @@ import { Platform, StyleSheet } from 'react-native';
 import { GlowTabIcon } from '@/components/GlowTabIcon';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { radius, shadow } from '@/constants/theme';
 
 export default function TabLayout() {
@@ -36,7 +35,8 @@ export default function TabLayout() {
           Platform.OS === 'ios' ? (
             <BlurView intensity={36} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
-        headerShown: useClientOnlyValue(false, true),
+        // Always hide native headers — Screen component owns the title chrome.
+        headerShown: false,
       }}>
       <Tabs.Screen
         name="index"

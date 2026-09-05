@@ -1,8 +1,10 @@
-import { useColorScheme as useColorSchemeCore } from 'react-native';
-
+/**
+ * QuietRoutine is designed as a light glass UI.
+ * Always return light so system Dark Mode cannot turn text white
+ * on the light canvas (the white-on-white bug).
+ */
 export type AppColorScheme = 'light' | 'dark';
 
-export const useColorScheme = (): AppColorScheme => {
-  const coreScheme = useColorSchemeCore();
-  return coreScheme === 'dark' ? 'dark' : 'light';
-};
+export function useColorScheme(): AppColorScheme {
+  return 'light';
+}
