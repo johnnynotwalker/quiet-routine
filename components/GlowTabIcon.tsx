@@ -1,5 +1,5 @@
 import { Bell, CalendarDays, Home, MapPin, type LucideIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type ColorValue } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -15,7 +15,7 @@ const ICONS: Record<TabName, LucideIcon> = {
 
 type Props = {
   name: TabName;
-  color: string;
+  color: ColorValue;
   focused: boolean;
 };
 
@@ -29,7 +29,7 @@ export function GlowTabIcon({ name, color, focused }: Props) {
       {focused ? (
         <View style={[styles.glow, { backgroundColor: palette.iceTint }, shadow.glow]} />
       ) : null}
-      <Icon size={24} color={color} strokeWidth={1.75} />
+      <Icon size={24} color={typeof color === 'string' ? color : palette.tint} strokeWidth={1.75} />
     </View>
   );
 }

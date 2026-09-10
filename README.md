@@ -24,7 +24,7 @@ A mobile app that keeps your phone silenced in the right places and at the right
 
 ## Stack
 
-- [Expo SDK 54](https://expo.dev/changelog/sdk-54) + [React Native](https://reactnative.dev) (compatible with **App Store Expo Go**)
+- [Expo SDK 57](https://expo.dev/changelog/sdk-57) + [React Native](https://reactnative.dev) (compatible with **App Store Expo Go** on SDK 57)
 - [react-native-maps](https://github.com/react-native-maps/react-native-maps) for the zone map
 - [expo-location](https://docs.expo.dev/versions/latest/sdk/location/) for geofencing and GPS
 - [expo-calendar](https://docs.expo.dev/versions/latest/sdk/calendar/) for Google/device calendar
@@ -34,10 +34,10 @@ A mobile app that keeps your phone silenced in the right places and at the right
 
 ```bash
 npm install
-npm start
+npx expo start -c
 ```
 
-Scan the QR code with **Expo Go from the App Store** (SDK 54) on your phone for full map, location, and notification behavior.
+Scan the QR code with **Expo Go** (SDK 57) on your phone for full map, location, and notification behavior. Clear the Metro cache (`-c`) after pulling an SDK upgrade.
 
 Web preview (UI only — map drawing and silence require a device):
 
