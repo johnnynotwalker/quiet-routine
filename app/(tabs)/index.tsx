@@ -1,12 +1,10 @@
 import { Bell } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
 
 import { HeaderIconButton } from '@/components/GlowTabIcon';
 import Screen from '@/components/Screen';
 import StatusHeroCard from '@/components/StatusHeroCard';
-import ZoneTile from '@/components/ZoneTile';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -24,7 +22,6 @@ import { formatTimeLabel, todayIsoDate } from '@/lib/time';
 
 export default function HomeScreen() {
   const { data, toggleManualSilence } = useApp();
-  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const [lockScreenReady, setLockScreenReady] = useState(false);
@@ -50,14 +47,12 @@ export default function HomeScreen() {
     return data.schedule
       .filter((item) => item.enabled && item.date === today)
       .filter((item) => {
-        const [h, m] = item.startTime.split(':').map(Number);
-        return h * 60 + m >= currentMinutes;
+        const [hours, minutes] = item.startTime.split(':').map(Number);
+        return hours * 60 + minutes >= currentMinutes;
       })
       .sort((a, b) => a.startTime.localeCompare(b.startTime))[0];
   }, [data.schedule, today]);
 
-  const activeZoneId = data.silence.reason?.type === 'zone' ? data.silence.reason.zoneId : null;
-  const zoneTiles = data.zones.slice(0, 2);
   const activeZoneName =
     data.silence.reason?.type === 'zone' ? data.silence.reason.zoneName : undefined;
 
@@ -106,48 +101,6 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <View style={styles.zoneRow}>
-          {zoneTiles.length === 0 ? (
-            <>
-              <ZoneTile
-                zone={{
-                  id: 'placeholder-home',
-                  name: 'Home Zone',
-                  shape: 'radius',
-                  latitude: 0,
-                  longitude: 0,
-                  radius: 100,
-                  enabled: false,
-                }}
-                active={false}
-                onPress={() => router.push('/(tabs)/zones')}
-              />
-              <ZoneTile
-                zone={{
-                  id: 'placeholder-office',
-                  name: 'Office Zone',
-                  shape: 'radius',
-                  latitude: 0,
-                  longitude: 0,
-                  radius: 100,
-                  enabled: false,
-                }}
-                active={false}
-                onPress={() => router.push('/(tabs)/zones')}
-              />
-            </>
-          ) : (
-            zoneTiles.map((zone) => (
-              <ZoneTile
-                key={zone.id}
-                zone={zone}
-                active={zone.id === activeZoneId || (zone.enabled && !activeZoneId)}
-                onPress={() => router.push('/(tabs)/zones')}
-              />
-            ))
-          )}
-        </View>
-
         {!lockScreenReady ? (
           <Text style={[styles.hint, { color: palette.muted }]}>{lockScreenSettingsHint()}</Text>
         ) : null}
@@ -171,10 +124,6 @@ const styles = StyleSheet.create({
   nextMeta: {
     ...typography.body,
     fontSize: 14,
-  },
-  zoneRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
   },
   hint: {
     ...typography.caption,

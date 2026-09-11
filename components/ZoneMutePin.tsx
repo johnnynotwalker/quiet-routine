@@ -10,14 +10,14 @@ type Props = {
   name: string;
   /** Zone is muted/armed → red pin; unmuted → gray */
   muted?: boolean;
+  /** Currently silencing because you are inside this zone */
   isCurrent?: boolean;
 };
 
-/** Custom map pin: mute icon + zone name (solid — no blur over maps). */
+/** Custom map pin: mute icon + zone name. Name stays the zone name (never becomes "Current"). */
 export default function ZoneMutePin({ name, muted = false, isCurrent = false }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
-  const label = isCurrent ? `Current: ${name}` : name;
   const pinColor = muted ? tokens.mutePin : '#94A3B8';
 
   return (
@@ -27,7 +27,7 @@ export default function ZoneMutePin({ name, muted = false, isCurrent = false }: 
         collapsable={false}>
         {isCurrent ? <View style={[styles.liveDot, { backgroundColor: palette.tint }]} /> : null}
         <Text style={[styles.label, { color: palette.text }]} numberOfLines={1}>
-          {label}
+          {name}
         </Text>
       </View>
       <View style={[styles.caret, { borderTopColor: palette.card }]} />

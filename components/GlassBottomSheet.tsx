@@ -18,7 +18,7 @@ export default function GlassBottomSheet({ children, style }: Props) {
   const palette = Colors[colorScheme];
 
   return (
-    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) + 66 }, style]}>
+    <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 10) + 70 }, style]}>
       <View style={[styles.sheet, shadow.card, { backgroundColor: palette.card, borderColor: palette.border }]}>
         <View style={styles.handleRow}>
           <View style={[styles.handle, { backgroundColor: palette.border }]} />

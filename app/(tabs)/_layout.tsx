@@ -1,6 +1,5 @@
-import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlowTabIcon } from '@/components/GlowTabIcon';
@@ -8,10 +7,13 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { radius, shadow } from '@/constants/theme';
 
+const TAB_HEIGHT = 58;
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 10);
 
   return (
     <Tabs
@@ -21,10 +23,12 @@ export default function TabLayout() {
         tabBarInactiveTintColor: palette.tabIconDefault,
         tabBarShowLabel: false,
         tabBarItemStyle: {
+          flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          paddingVertical: 0,
-          height: 58,
+          paddingTop: 0,
+          paddingBottom: 0,
+          height: TAB_HEIGHT,
         },
         tabBarIconStyle: {
           marginTop: 0,
@@ -32,24 +36,24 @@ export default function TabLayout() {
         },
         tabBarStyle: {
           position: 'absolute',
-          left: 48,
-          right: 48,
-          bottom: Math.max(insets.bottom, 8),
-          height: 58,
+          left: 40,
+          right: 40,
+          bottom: 0,
+          height: TAB_HEIGHT + bottomPad,
           paddingTop: 0,
-          paddingBottom: 0,
-          borderRadius: radius.pill,
+          paddingBottom: bottomPad,
+          borderRadius: 0,
+          borderTopLeftRadius: radius.pill,
+          borderTopRightRadius: radius.pill,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: palette.glassBorder,
-          backgroundColor: palette.card,
+          borderBottomWidth: 0,
+          borderColor: palette.border,
+          backgroundColor: '#FFFFFF',
           ...shadow.card,
-          overflow: 'hidden',
+          elevation: 8,
         },
-        tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
-            <BlurView intensity={36} tint="light" style={StyleSheet.absoluteFill} />
-          ) : null,
+        tabBarBackground: () => null,
         headerShown: false,
       }}>
       <Tabs.Screen

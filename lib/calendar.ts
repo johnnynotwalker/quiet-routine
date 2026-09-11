@@ -1,10 +1,14 @@
-import * as Calendar from 'expo-calendar';
+import {
+  EntityTypes,
+  getCalendarPermissions,
+  getCalendars,
+  listEvents,
+  requestCalendarPermissions as requestExpoCalendarPermissions,
+} from 'expo-calendar';
 import { Platform } from 'react-native';
 
 import { ScheduledSilence } from './types';
-import { createId, todayIsoDate } from './time';
-
-export type DeviceCalendar = Awaited<ReturnType<typeof Calendar.getCalendarsAsync>>[number];
+import { createId } from './time';
 
 export type CalendarEventPreview = {
   externalId: string;
@@ -12,6 +16,13 @@ export type CalendarEventPreview = {
   startDate: Date;
   endDate: Date;
   calendarTitle: string;
+};
+
+export type CalendarLoadResult = {
+  events: CalendarEventPreview[];
+  /** null when connected successfully (even if there are zero events). */
+  error: string | null;
+  permissionGranted: boolean;
 };
 
 function formatTime(date: Date): string {
@@ -27,44 +38,60 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export async function requestCalendarPermissions(): Promise<boolean> {
-  const { status } = await Calendar.requestCalendarPermissionsAsync();
-  return status === 'granted';
-}
-
-export async function getWritableCalendars(): Promise<DeviceCalendar[]> {
-  const granted = await requestCalendarPermissions();
-  if (!granted) return [];
-
-  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-  return calendars.filter((calendar) => calendar.allowsModifications || calendar.source?.name);
-}
-
-export async function fetchUpcomingCalendarEvents(daysAhead = 14): Promise<CalendarEventPreview[]> {
+export async function requestCalendarAccess(): Promise<boolean> {
   try {
-    const granted = await requestCalendarPermissions();
-    if (!granted) return [];
+    const existing = await getCalendarPermissions();
+    if (existing.granted || existing.status === 'granted') {
+      return true;
+    }
+    const requested = await requestExpoCalendarPermissions();
+    return requested.granted || requested.status === 'granted';
+  } catch (error) {
+    console.error('Calendar permission request failed', error);
+    return false;
+  }
+}
 
-    const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-    if (calendars.length === 0) return [];
+/** Preferred UI helper — empty calendars are success, not a connection failure. */
+export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<CalendarLoadResult> {
+  try {
+    const granted = await requestCalendarAccess();
+    if (!granted) {
+      return {
+        events: [],
+        permissionGranted: false,
+        error:
+          Platform.OS === 'ios'
+            ? 'Calendar access is off. Enable it in iPhone Settings → QuietRoutine → Calendars, then tap Import again.'
+            : 'Calendar access is off. Enable calendar permission for QuietRoutine, then try again.',
+      };
+    }
+
+    const calendars = await getCalendars(EntityTypes.EVENT);
+    if (calendars.length === 0) {
+      return {
+        events: [],
+        permissionGranted: true,
+        error:
+          Platform.OS === 'ios'
+            ? 'No calendars found. Add Google Calendar in iPhone Settings → Calendar → Accounts, then try again.'
+            : 'No calendars found. Add a Google account in system Settings, then try again.',
+      };
+    }
 
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(end.getDate() + daysAhead);
 
-    const events = await Calendar.getEventsAsync(
-      calendars.map((calendar) => calendar.id),
-      start,
-      end
-    );
+    const events = await listEvents(calendars, start, end);
 
-    return events
+    const mapped: CalendarEventPreview[] = events
       .filter((event) => !event.allDay)
       .map((event) => {
         const calendar = calendars.find((item) => item.id === event.calendarId);
         return {
-          externalId: event.id,
+          externalId: String(event.id),
           title: event.title || 'Untitled event',
           startDate: new Date(event.startDate),
           endDate: new Date(event.endDate),
@@ -72,10 +99,31 @@ export async function fetchUpcomingCalendarEvents(daysAhead = 14): Promise<Calen
         };
       })
       .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+
+    return {
+      events: mapped,
+      permissionGranted: true,
+      error: null,
+    };
   } catch (error) {
     console.error('Failed to fetch calendar events', error);
-    throw error instanceof Error ? error : new Error('Could not read calendar events.');
+    return {
+      events: [],
+      permissionGranted: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Could not connect to the device calendar. Fully close Expo Go and try again.',
+    };
   }
+}
+
+export async function fetchUpcomingCalendarEvents(daysAhead = 14): Promise<CalendarEventPreview[]> {
+  const result = await loadUpcomingCalendarEvents(daysAhead);
+  if (!result.permissionGranted && result.error) {
+    throw new Error(result.error);
+  }
+  return result.events;
 }
 
 export function calendarEventToScheduledSilence(
@@ -96,26 +144,13 @@ export function calendarEventToScheduledSilence(
   };
 }
 
-export function isGoogleCalendarSource(calendar: DeviceCalendar): boolean {
-  const sourceName = calendar.source?.name?.toLowerCase() ?? '';
-  const sourceType = calendar.source?.type?.toLowerCase() ?? '';
-
-  if (Platform.OS === 'android') {
-    return sourceName.includes('google') || sourceType.includes('com.google');
-  }
-
-  return sourceName.includes('google') || sourceType.includes('google');
-}
-
-export async function getGoogleLinkedCalendars(): Promise<DeviceCalendar[]> {
-  const calendars = await getWritableCalendars();
-  return calendars.filter(isGoogleCalendarSource);
-}
-
 export function describeCalendarAccess(): string {
   if (Platform.OS === 'android') {
-    return 'Connect to your Google Calendar (or any calendar on this device) to auto-silence during meetings and routines.';
+    return 'Imports events from Google Calendar and other calendars synced on this phone.';
   }
 
-  return 'Connect to calendars synced on this iPhone — including Google Calendar if you added it in Settings.';
+  return 'Imports events from calendars synced on this iPhone (including Google Calendar if added in Settings → Calendar → Accounts).';
 }
+
+/** Back-compat alias */
+export const requestCalendarPermissions = requestCalendarAccess;

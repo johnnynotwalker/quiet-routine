@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import AppSwitch from '@/components/AppSwitch';
@@ -20,8 +20,7 @@ import {
   CalendarEventPreview,
   calendarEventToScheduledSilence,
   describeCalendarAccess,
-  fetchUpcomingCalendarEvents,
-  requestCalendarPermissions,
+  loadUpcomingCalendarEvents,
 } from '@/lib/calendar';
 import { getEffectiveEndTime } from '@/lib/schedule';
 import { createId, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
@@ -29,7 +28,6 @@ import { spacing, typography } from '@/constants/theme';
 import { ScheduledSilence } from '@/lib/types';
 
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
-
 
 export default function ScheduleScreen() {
   const { data, setSchedule } = useApp();
@@ -42,11 +40,11 @@ export default function ScheduleScreen() {
   const [endTime, setEndTime] = useState('12:00');
   const [useCalendarEnd, setUseCalendarEnd] = useState(true);
   const [customEndTime, setCustomEndTime] = useState('12:30');
-  const [reminderMinutes, setReminderMinutes] = useState(30);
-  const [customReminder, setCustomReminder] = useState('');
+  const [reminderMinutes, setReminderMinutes] = useState(data.settings.defaultReminderMinutes);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventPreview[]>([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
+  const [calendarHint, setCalendarHint] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showGoogleImport, setShowGoogleImport] = useState(false);
 
@@ -69,34 +67,20 @@ export default function ScheduleScreen() {
   const loadCalendarEvents = async () => {
     setLoadingCalendar(true);
     setCalendarError(null);
-    try {
-      const granted = await requestCalendarPermissions();
-      if (!granted) {
-        Alert.alert('Calendar access needed', 'Allow calendar access to import Google Calendar events.');
-        setCalendarError('Calendar permission was denied.');
-        return;
-      }
-      const events = await fetchUpcomingCalendarEvents();
-      setCalendarEvents(events);
-      if (events.length === 0) {
-        setCalendarError('No upcoming events found on this device.');
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Something went wrong while reading your calendar.';
-      setCalendarError(message);
-      setCalendarEvents([]);
-      Alert.alert('Calendar error', message);
-    } finally {
-      setLoadingCalendar(false);
+    setCalendarHint(null);
+    const result = await loadUpcomingCalendarEvents();
+    setCalendarEvents(result.events);
+    setLoadingCalendar(false);
+
+    if (result.error) {
+      setCalendarError(result.error);
+      return;
+    }
+
+    if (result.events.length === 0) {
+      setCalendarHint('Connected — no upcoming events in the next 2 weeks.');
     }
   };
-
-  useEffect(() => {
-    loadCalendarEvents().catch(() => {
-      // Errors are surfaced inside loadCalendarEvents.
-    });
-  }, []);
 
   const addMeeting = async () => {
     if (!title.trim()) {
@@ -112,7 +96,6 @@ export default function ScheduleScreen() {
       return;
     }
 
-    const reminder = customReminder ? Math.max(0, Number(customReminder) || 0) : reminderMinutes;
     const meeting: ScheduledSilence = {
       id: createId('meeting'),
       title: title.trim(),
@@ -122,7 +105,7 @@ export default function ScheduleScreen() {
       enabled: true,
       useCalendarEnd,
       customEndTime: useCalendarEnd ? undefined : customEndTime,
-      reminderMinutes: reminder,
+      reminderMinutes,
       source: 'local',
     };
 
@@ -158,11 +141,18 @@ export default function ScheduleScreen() {
       action={
         <HeaderIconButton
           icon={showAddForm ? X : Plus}
-          onPress={() => setShowAddForm((v) => !v)}
+          onPress={() => setShowAddForm((value) => !value)}
         />
       }>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <WeekStrip selectedDate={selectedDate} markedDates={markedDates} onSelectDate={setSelectedDate} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        <WeekStrip
+          selectedDate={selectedDate}
+          markedDates={markedDates}
+          onSelectDate={setSelectedDate}
+        />
 
         <View style={styles.list}>
           {eventsForSelectedDay.length === 0 ? (
@@ -198,7 +188,12 @@ export default function ScheduleScreen() {
         {showAddForm ? (
           <GlassCard contentStyle={styles.form}>
             <Text style={[styles.formTitle, { color: palette.text }]}>New event</Text>
-            <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Focus session..." />
+            <FormField
+              label="Title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Focus session..."
+            />
             <View style={styles.timeColumn}>
               <TimePickerField label="Starts" value={startTime} onChange={setStartTime} />
               <TimePickerField label="Ends" value={endTime} onChange={setEndTime} />
@@ -216,11 +211,8 @@ export default function ScheduleScreen() {
                 <Chip
                   key={preset}
                   label={preset === 0 ? 'Off' : `${preset}m`}
-                  active={reminderMinutes === preset && !customReminder}
-                  onPress={() => {
-                    setReminderMinutes(preset);
-                    setCustomReminder('');
-                  }}
+                  active={reminderMinutes === preset}
+                  onPress={() => setReminderMinutes(preset)}
                 />
               ))}
             </View>
@@ -229,9 +221,11 @@ export default function ScheduleScreen() {
         ) : null}
 
         <GlassCard compact contentStyle={styles.importCard}>
-          <Pressable onPress={() => setShowGoogleImport((v) => !v)} style={styles.importHeader}>
+          <Pressable onPress={() => setShowGoogleImport((value) => !value)} style={styles.importHeader}>
             <Text style={[styles.formTitle, { color: palette.text }]}>Google Calendar</Text>
-            <Text style={{ color: palette.tint, fontWeight: '600' }}>{showGoogleImport ? 'Hide' : 'Show'}</Text>
+            <Text style={{ color: palette.tint, fontWeight: '600' }}>
+              {showGoogleImport ? 'Hide' : 'Show'}
+            </Text>
           </Pressable>
           {showGoogleImport ? (
             <>
@@ -239,17 +233,27 @@ export default function ScheduleScreen() {
               {calendarError ? (
                 <Text style={[styles.empty, { color: palette.danger }]}>{calendarError}</Text>
               ) : null}
+              {calendarHint && !calendarError ? (
+                <Text style={[styles.empty, { color: palette.success }]}>{calendarHint}</Text>
+              ) : null}
               <Button
-                title={loadingCalendar ? 'Loading...' : 'Import events'}
+                title={loadingCalendar ? 'Connecting...' : 'Import events'}
                 variant="secondary"
                 onPress={loadCalendarEvents}
+                disabled={loadingCalendar}
               />
-              {calendarEvents.slice(0, 6).map((event) => (
+              {calendarEvents.slice(0, 8).map((event) => (
                 <View key={event.externalId} style={styles.importRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.switchLabel, { color: palette.text }]}>{event.title}</Text>
                     <Text style={[styles.empty, { color: palette.muted }]}>
-                      {event.startDate.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      {event.startDate.toLocaleString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                      {event.calendarTitle ? ` · ${event.calendarTitle}` : ''}
                     </Text>
                   </View>
                   <Button title="Add" onPress={() => importCalendarEvent(event)} />
