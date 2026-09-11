@@ -1,5 +1,5 @@
 import { Crosshair, Moon, Sun } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import AppSwitch from '@/components/AppSwitch';
 import GlassCard from '@/components/GlassCard';
@@ -15,6 +15,7 @@ type Props = {
   endTime: string;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
+  onLongPress?: () => void;
 };
 
 function eventIcon(title: string) {
@@ -30,26 +31,29 @@ export default function ScheduleEventRow({
   endTime,
   enabled,
   onToggle,
+  onLongPress,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const Icon = eventIcon(title);
 
   return (
-    <GlassCard compact contentStyle={styles.card}>
-      <View style={styles.row}>
-        <View style={[styles.iconWrap, { backgroundColor: palette.iceTint }]}>
-          <Icon size={20} color={palette.tint} strokeWidth={1.75} />
+    <Pressable onLongPress={onLongPress} delayLongPress={350}>
+      <GlassCard compact contentStyle={styles.card}>
+        <View style={styles.row}>
+          <View style={[styles.iconWrap, { backgroundColor: palette.iceTint }]}>
+            <Icon size={20} color={palette.tint} strokeWidth={1.75} />
+          </View>
+          <View style={styles.text}>
+            <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
+            <Text style={[styles.time, { color: palette.muted }]}>
+              {formatTimeLabel(startTime)} – {formatTimeLabel(endTime)}
+            </Text>
+          </View>
+          <AppSwitch value={enabled} onValueChange={onToggle} />
         </View>
-        <View style={styles.text}>
-          <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
-          <Text style={[styles.time, { color: palette.muted }]}>
-            {formatTimeLabel(startTime)} – {formatTimeLabel(endTime)}
-          </Text>
-        </View>
-        <AppSwitch value={enabled} onValueChange={onToggle} />
-      </View>
-    </GlassCard>
+      </GlassCard>
+    </Pressable>
   );
 }
 

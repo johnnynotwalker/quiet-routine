@@ -1,5 +1,5 @@
 import { Volume2, VolumeX } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import Button from '@/components/Button';
 import GlassCard from '@/components/GlassCard';
@@ -15,6 +15,7 @@ type Props = {
   timeRange?: string;
   onPrimaryAction: () => void;
   primaryLabel: string;
+  onFocusAction?: () => void;
 };
 
 export default function StatusHeroCard({
@@ -23,6 +24,7 @@ export default function StatusHeroCard({
   timeRange,
   onPrimaryAction,
   primaryLabel,
+  onFocusAction,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -56,6 +58,9 @@ export default function StatusHeroCard({
         </View>
       </View>
       <Button title={primaryLabel} onPress={onPrimaryAction} style={styles.cta} />
+      {Platform.OS === 'ios' && onFocusAction ? (
+        <Button title="Enable Focus on iPhone" variant="secondary" onPress={onFocusAction} />
+      ) : null}
     </GlassCard>
   );
 }
@@ -79,18 +84,16 @@ const styles = StyleSheet.create({
   text: {
     flex: 1,
     gap: 4,
-    paddingTop: 4,
   },
   title: {
     ...typography.heading,
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
   },
   detail: {
     ...typography.body,
     fontSize: 14,
   },
   cta: {
-    width: '100%',
+    alignSelf: 'stretch',
   },
 });

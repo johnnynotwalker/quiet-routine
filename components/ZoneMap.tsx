@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import MapView, { Circle, Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
+import BreathingZoneCircle from '@/components/BreathingZoneCircle';
 import Chip from '@/components/Chip';
 import ZoneMutePin from '@/components/ZoneMutePin';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { getCurrentCoordinates, watchCurrentLocation } from '@/lib/geofencing';
+import { polygonCentroid } from '@/lib/polygon';
 import { LatLng, RADIUS_PRESETS, SilentZone, ZoneShape } from '@/lib/types';
 import { radius as radii, spacing } from '@/constants/theme';
 
@@ -21,6 +23,12 @@ type Props = {
   fullBleed?: boolean;
   savedZones?: SilentZone[];
   activeZoneId?: string | null;
+  /** Only show draft drawing geometry / points while composing */
+  drawing?: boolean;
+  /** Allow moving zones / editing vertices */
+  editMode?: boolean;
+  onToggleZoneMute?: (zoneId: string) => void;
+  onMoveZone?: (zoneId: string, center: LatLng) => void;
 };
 
 const DEFAULT_REGION: Region = {
@@ -42,6 +50,13 @@ const LIGHT_MAP_STYLE = [
   { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#EFF6FF' }] },
 ];
 
+function zonePinCoordinate(zone: SilentZone): LatLng {
+  if (zone.shape === 'polygon' && zone.polygon && zone.polygon.length >= 3) {
+    return polygonCentroid(zone.polygon);
+  }
+  return { latitude: zone.latitude, longitude: zone.longitude };
+}
+
 export default function ZoneMap({
   shape,
   radius,
@@ -52,12 +67,23 @@ export default function ZoneMap({
   fullBleed = false,
   savedZones = [],
   activeZoneId = null,
+  drawing = false,
+  editMode = false,
+  onToggleZoneMute,
+  onMoveZone,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const mapRef = useRef<MapView>(null);
   const [center, setCenter] = useState<LatLng | null>(null);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
+  const [tracksPins, setTracksPins] = useState(true);
+
+  useEffect(() => {
+    setTracksPins(true);
+    const timer = setTimeout(() => setTracksPins(false), 800);
+    return () => clearTimeout(timer);
+  }, [savedZones, activeZoneId]);
 
   useEffect(() => {
     let subscription: { remove: () => void } | null = null;
@@ -80,15 +106,16 @@ export default function ZoneMap({
       const watch = await watchCurrentLocation((liveCoords) => {
         const point = { latitude: liveCoords.latitude, longitude: liveCoords.longitude };
         setCenter(point);
-        if (shape === 'radius') onCenterChange(point);
+        if (drawing && shape === 'radius') onCenterChange(point);
       });
       subscription = watch;
     })();
 
     return () => subscription?.remove();
-  }, [shape, onCenterChange]);
+  }, [shape, onCenterChange, drawing]);
 
   const handleMapPress = (event: { nativeEvent: { coordinate: LatLng } }) => {
+    if (!drawing) return;
     const point = event.nativeEvent.coordinate;
     if (shape === 'radius') {
       setCenter(point);
@@ -97,6 +124,10 @@ export default function ZoneMap({
     }
     onPolygonChange([...polygon, point]);
   };
+
+  const showDraft = drawing && !fullBleed ? true : drawing;
+  const zoneStroke = palette.tint;
+  const zoneFill = 'rgba(56, 189, 248, 0.18)';
 
   return (
     <View style={[styles.wrapper, fullBleed && styles.wrapperFull]}>
@@ -111,18 +142,14 @@ export default function ZoneMap({
         customMapStyle={LIGHT_MAP_STYLE}>
         {fullBleed
           ? savedZones.map((zone) => {
-              const isActive = zone.id === activeZoneId;
-              const stroke = isActive ? palette.tint : '#94A3B8';
-              const fill = isActive ? 'rgba(56, 189, 248, 0.2)' : 'rgba(148, 163, 184, 0.14)';
               if (zone.shape === 'radius') {
                 return (
-                  <Circle
+                  <BreathingZoneCircle
                     key={zone.id}
                     center={{ latitude: zone.latitude, longitude: zone.longitude }}
                     radius={Math.max(zone.radius, 1)}
-                    strokeColor={stroke}
-                    fillColor={fill}
-                    strokeWidth={isActive ? 2 : 1}
+                    strokeColor={zoneStroke}
+                    strokeWidth={zone.id === activeZoneId ? 2.5 : 2}
                   />
                 );
               }
@@ -131,9 +158,9 @@ export default function ZoneMap({
                   <Polygon
                     key={zone.id}
                     coordinates={zone.polygon}
-                    strokeColor={stroke}
-                    fillColor={fill}
-                    strokeWidth={isActive ? 2 : 1}
+                    strokeColor={zoneStroke}
+                    fillColor={zoneFill}
+                    strokeWidth={zone.id === activeZoneId ? 2.5 : 2}
                   />
                 );
               }
@@ -143,20 +170,31 @@ export default function ZoneMap({
 
         {fullBleed
           ? savedZones.map((zone) => {
-              const isActive = zone.id === activeZoneId;
+              const muted = zone.enabled;
+              const isCurrent = zone.id === activeZoneId;
+              const coordinate = zonePinCoordinate(zone);
               return (
                 <Marker
                   key={`pin-${zone.id}`}
-                  coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
+                  coordinate={coordinate}
                   anchor={{ x: 0.5, y: 1 }}
-                  tracksViewChanges={false}>
-                  <ZoneMutePin name={zone.name} active={isActive} showCurrentPrefix={isActive} />
+                  tracksViewChanges={tracksPins}
+                  tappable
+                  draggable={editMode && zone.shape === 'radius'}
+                  onDragEnd={(event) => {
+                    if (!editMode || !onMoveZone) return;
+                    onMoveZone(zone.id, event.nativeEvent.coordinate);
+                  }}
+                  onPress={() => {
+                    onToggleZoneMute?.(zone.id);
+                  }}>
+                  <ZoneMutePin name={zone.name} muted={muted} isCurrent={isCurrent} />
                 </Marker>
               );
             })
           : null}
 
-        {center && shape === 'radius' ? (
+        {showDraft && center && shape === 'radius' ? (
           <>
             {!fullBleed ? <Marker coordinate={center} title="Zone center" /> : null}
             <Circle
@@ -169,7 +207,7 @@ export default function ZoneMap({
           </>
         ) : null}
 
-        {shape === 'polygon' && polygon.length >= 2 ? (
+        {showDraft && shape === 'polygon' && polygon.length >= 2 ? (
           <Polygon
             coordinates={polygon}
             strokeColor={palette.tint}
@@ -177,7 +215,7 @@ export default function ZoneMap({
             strokeWidth={2}
           />
         ) : null}
-        {shape === 'polygon'
+        {showDraft && shape === 'polygon'
           ? polygon.map((point, index) => (
               <Marker key={`${point.latitude}-${point.longitude}-${index}`} coordinate={point} />
             ))

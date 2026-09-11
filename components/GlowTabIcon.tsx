@@ -61,7 +61,7 @@ export function HeaderIconButton({
 const styles = StyleSheet.create({
   wrap: {
     width: 48,
-    height: 40,
+    height: 58,
     alignItems: 'center',
     justifyContent: 'center',
   },

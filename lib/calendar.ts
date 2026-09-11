@@ -41,36 +41,41 @@ export async function getWritableCalendars(): Promise<DeviceCalendar[]> {
 }
 
 export async function fetchUpcomingCalendarEvents(daysAhead = 14): Promise<CalendarEventPreview[]> {
-  const granted = await requestCalendarPermissions();
-  if (!granted) return [];
+  try {
+    const granted = await requestCalendarPermissions();
+    if (!granted) return [];
 
-  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-  if (calendars.length === 0) return [];
+    const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+    if (calendars.length === 0) return [];
 
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + daysAhead);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + daysAhead);
 
-  const events = await Calendar.getEventsAsync(
-    calendars.map((calendar) => calendar.id),
-    start,
-    end
-  );
+    const events = await Calendar.getEventsAsync(
+      calendars.map((calendar) => calendar.id),
+      start,
+      end
+    );
 
-  return events
-    .filter((event) => !event.allDay)
-    .map((event) => {
-      const calendar = calendars.find((item) => item.id === event.calendarId);
-      return {
-        externalId: event.id,
-        title: event.title || 'Untitled event',
-        startDate: new Date(event.startDate),
-        endDate: new Date(event.endDate),
-        calendarTitle: calendar?.title ?? calendar?.source?.name ?? 'Calendar',
-      };
-    })
-    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    return events
+      .filter((event) => !event.allDay)
+      .map((event) => {
+        const calendar = calendars.find((item) => item.id === event.calendarId);
+        return {
+          externalId: event.id,
+          title: event.title || 'Untitled event',
+          startDate: new Date(event.startDate),
+          endDate: new Date(event.endDate),
+          calendarTitle: calendar?.title ?? calendar?.source?.name ?? 'Calendar',
+        };
+      })
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+  } catch (error) {
+    console.error('Failed to fetch calendar events', error);
+    throw error instanceof Error ? error : new Error('Could not read calendar events.');
+  }
 }
 
 export function calendarEventToScheduledSilence(

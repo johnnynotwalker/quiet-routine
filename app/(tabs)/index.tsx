@@ -12,6 +12,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { openFocusSettings } from '@/lib/focus';
 import {
   canShowOnLockScreen,
   getStatusNotificationPermissions,
@@ -87,6 +88,9 @@ export default function HomeScreen() {
           timeRange={silenceTimeRange}
           primaryLabel={primaryLabel}
           onPrimaryAction={toggleManualSilence}
+          onFocusAction={() => {
+            openFocusSettings().catch(console.error);
+          }}
         />
 
         <View style={styles.nextBlock}>

@@ -8,31 +8,32 @@ import { radius, shadow, spacing } from '@/constants/theme';
 
 type Props = {
   name: string;
-  active?: boolean;
-  showCurrentPrefix?: boolean;
+  /** Zone is muted/armed → red pin; unmuted → gray */
+  muted?: boolean;
+  isCurrent?: boolean;
 };
 
-/** Custom map pin: mute icon + zone name pill (solid — no blur over maps). */
-export default function ZoneMutePin({ name, active = false, showCurrentPrefix = false }: Props) {
+/** Custom map pin: mute icon + zone name (solid — no blur over maps). */
+export default function ZoneMutePin({ name, muted = false, isCurrent = false }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
-  const label = showCurrentPrefix && active ? `Current: ${name}` : name;
+  const label = isCurrent ? `Current: ${name}` : name;
+  const pinColor = muted ? tokens.mutePin : '#94A3B8';
 
   return (
-    <View style={styles.wrap}>
-      <View style={[styles.pill, shadow.soft, { backgroundColor: palette.card, borderColor: palette.border }]}>
-        {active ? <View style={[styles.liveDot, { backgroundColor: palette.tint }]} /> : null}
+    <View style={styles.wrap} collapsable={false}>
+      <View
+        style={[styles.pill, shadow.soft, { backgroundColor: palette.card, borderColor: palette.border }]}
+        collapsable={false}>
+        {isCurrent ? <View style={[styles.liveDot, { backgroundColor: palette.tint }]} /> : null}
         <Text style={[styles.label, { color: palette.text }]} numberOfLines={1}>
           {label}
         </Text>
       </View>
-      <View style={styles.caret} />
+      <View style={[styles.caret, { borderTopColor: palette.card }]} />
       <View
-        style={[
-          styles.pin,
-          shadow.soft,
-          { backgroundColor: active ? tokens.mutePin : '#94A3B8', borderColor: '#FFFFFF' },
-        ]}>
+        style={[styles.pin, shadow.soft, { backgroundColor: pinColor, borderColor: '#FFFFFF' }]}
+        collapsable={false}>
         <VolumeX size={14} color="#FFFFFF" strokeWidth={2.2} />
       </View>
     </View>
@@ -42,7 +43,7 @@ export default function ZoneMutePin({ name, active = false, showCurrentPrefix = 
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    width: 160,
+    justifyContent: 'flex-end',
   },
   pill: {
     flexDirection: 'row',
@@ -52,7 +53,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     borderWidth: 1,
-    maxWidth: 160,
+    maxWidth: 148,
   },
   liveDot: {
     width: 6,
@@ -72,11 +73,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 7,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#FFFFFF',
     marginTop: -1,
   },
   pin: {
-    marginTop: 4,
+    marginTop: 2,
     width: 32,
     height: 32,
     borderRadius: 16,

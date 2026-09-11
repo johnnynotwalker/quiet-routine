@@ -52,11 +52,14 @@ export async function syncEventReminders(schedule: ScheduledSilence[]): Promise<
       identifier: reminderId(meeting.id),
       content: {
         title: `⏰ ${meeting.title} starts soon`,
-        body: `Starts in ${meeting.reminderMinutes} minutes — switch your phone to silent now.`,
+        body:
+          Platform.OS === 'ios'
+            ? `Starts in ${meeting.reminderMinutes} minutes — tap to open Focus settings.`
+            : `Starts in ${meeting.reminderMinutes} minutes — switch your phone to silent now.`,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
         vibrate: [0, 500, 200, 500, 200, 500],
-        data: { type: 'alarm' },
+        data: { type: 'alarm', action: 'open-focus' },
         ...(Platform.OS === 'android' ? { channelId: ALARM_CHANNEL_ID } : {}),
         ...(Platform.OS === 'ios' ? { interruptionLevel: 'timeSensitive' as const } : {}),
       },

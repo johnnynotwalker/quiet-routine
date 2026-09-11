@@ -56,7 +56,7 @@ On first launch, QuietRoutine asks for:
 ## Platform notes
 
 - **Android** — Full geofencing, GPS zones, calendar import, and persistent notifications.
-- **iOS** — Geofencing and notifications work. Third-party apps cannot change the system ringer; QuietRoutine shows a persistent reminder and can integrate with Focus modes for system-level silence.
+- **iOS** — Geofencing and notifications work. Third-party apps cannot change the system ringer; QuietRoutine shows a persistent reminder and can open **Focus settings** so you can enable system-level silence yourself.
 
 ## Project structure
 

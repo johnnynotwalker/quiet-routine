@@ -40,7 +40,7 @@ function SheetStat({
 }
 
 export default function ZonesScreen() {
-  const { data, setZones } = useApp();
+  const { data, setZones, toggleZoneMute, deleteZone, moveZone } = useApp();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
@@ -50,16 +50,29 @@ export default function ZonesScreen() {
   const [center, setCenter] = useState<LatLng | null>(null);
   const [polygon, setPolygon] = useState<LatLng[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   const activeZoneId =
     data.silence.reason?.type === 'zone' ? data.silence.reason.zoneId : null;
 
-  const activeZone = useMemo(() => {
-    if (activeZoneId) {
-      return data.zones.find((zone) => zone.id === activeZoneId);
+  const selectedZone = useMemo(() => {
+    if (selectedZoneId) {
+      return data.zones.find((zone) => zone.id === selectedZoneId) ?? null;
     }
-    return data.zones.find((zone) => zone.enabled) ?? data.zones[0];
-  }, [activeZoneId, data.zones]);
+    if (activeZoneId) {
+      return data.zones.find((zone) => zone.id === activeZoneId) ?? null;
+    }
+    return data.zones[0] ?? null;
+  }, [activeZoneId, data.zones, selectedZoneId]);
+
+  const resetComposer = () => {
+    setName('');
+    setPolygon([]);
+    setRadius(RADIUS_PRESETS[2]);
+    setShape('radius');
+    setComposerOpen(false);
+  };
 
   const addZone = async () => {
     if (!name.trim()) {
@@ -88,10 +101,24 @@ export default function ZonesScreen() {
     };
 
     await setZones([...data.zones, zone]);
-    setName('');
-    setPolygon([]);
-    setRadius(RADIUS_PRESETS[2]);
-    setComposerOpen(false);
+    setSelectedZoneId(zone.id);
+    resetComposer();
+  };
+
+  const confirmDelete = () => {
+    if (!selectedZone) return;
+    Alert.alert('Delete zone', `Remove “${selectedZone.name}”?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deleteZone(selectedZone.id).catch(console.error);
+          setSelectedZoneId(null);
+          setEditMode(false);
+        },
+      },
+    ]);
   };
 
   return (
@@ -107,6 +134,15 @@ export default function ZonesScreen() {
           fullBleed
           savedZones={data.zones}
           activeZoneId={activeZoneId}
+          drawing={composerOpen}
+          editMode={editMode && !composerOpen}
+          onToggleZoneMute={(zoneId) => {
+            setSelectedZoneId(zoneId);
+            toggleZoneMute(zoneId).catch(console.error);
+          }}
+          onMoveZone={(zoneId, nextCenter) => {
+            moveZone(zoneId, nextCenter).catch(console.error);
+          }}
         />
 
         <GlassBottomSheet>
@@ -115,7 +151,11 @@ export default function ZonesScreen() {
               <Text style={[styles.sheetTitle, { color: palette.text }]}>New zone</Text>
               <View style={styles.shapeRow}>
                 <Chip label="Radius" active={shape === 'radius'} onPress={() => setShape('radius')} />
-                <Chip label="Draw" active={shape === 'polygon'} onPress={() => setShape('polygon')} />
+                <Chip
+                  label="Draw"
+                  active={shape === 'polygon'}
+                  onPress={() => setShape('polygon')}
+                />
               </View>
               <FormField label="Place name" value={name} onChangeText={setName} placeholder="Work, home..." />
               {shape === 'radius' ? (
@@ -129,39 +169,66 @@ export default function ZonesScreen() {
                     />
                   ))}
                 </View>
-              ) : null}
+              ) : (
+                <Text style={[styles.sheetMeta, { color: palette.muted }]}>
+                  Tap the map to add points ({polygon.length} so far). Need at least 3.
+                </Text>
+              )}
               <Button title="Save zone" onPress={addZone} />
-              <Button title="Cancel" variant="secondary" onPress={() => setComposerOpen(false)} />
+              <Button title="Cancel" variant="secondary" onPress={resetComposer} />
             </>
           ) : (
             <>
               <Text style={[styles.sheetTitle, { color: palette.text }]}>
-                {activeZone?.name ?? 'No zones yet'}
+                {selectedZone?.name ?? 'No zones yet'}
               </Text>
-              {activeZone ? (
+              {selectedZone ? (
                 <View style={styles.statsRow}>
                   <SheetStat
-                    label={activeZone.enabled ? 'Active' : 'Inactive'}
-                    accent={activeZone.enabled ? palette.success : palette.muted}
+                    label={selectedZone.enabled ? 'Muted' : 'Unmuted'}
+                    accent={selectedZone.enabled ? palette.mutePin : palette.muted}
                     palette={palette}
                   />
                   <SheetStat
                     icon={MapPin}
                     label={
-                      activeZone.shape === 'polygon'
-                        ? `${activeZone.polygon?.length ?? 0} pts`
-                        : `${activeZone.radius}m`
+                      selectedZone.shape === 'polygon'
+                        ? `${selectedZone.polygon?.length ?? 0} pts`
+                        : `${selectedZone.radius}m`
                     }
                     palette={palette}
                   />
-                  <SheetStat icon={Clock} label="Strict" palette={palette} />
+                  <SheetStat
+                    icon={Clock}
+                    label={editMode ? 'Edit on' : 'Locked'}
+                    accent={editMode ? palette.tint : palette.muted}
+                    palette={palette}
+                  />
                 </View>
               ) : (
                 <Text style={[styles.sheetMeta, { color: palette.muted }]}>
                   Add a zone to auto-silence by location
                 </Text>
               )}
-              <Button title="Add New Zone" onPress={() => setComposerOpen(true)} />
+              <View style={styles.shapeRow}>
+                <Chip
+                  label={editMode ? 'Done editing' : 'Edit mode'}
+                  active={editMode}
+                  onPress={() => setEditMode((value) => !value)}
+                />
+              </View>
+              <Button title="Add New Zone" onPress={() => {
+                setEditMode(false);
+                setComposerOpen(true);
+              }} />
+              {selectedZone ? (
+                <Button title="Delete zone" variant="secondary" onPress={confirmDelete} />
+              ) : null}
+              {editMode ? (
+                <Text style={[styles.sheetMeta, { color: palette.muted }]}>
+                  Drag a radius zone pin to move it. Zones stay locked when edit mode is off.
+                </Text>
+              ) : null}
             </>
           )}
         </GlassBottomSheet>

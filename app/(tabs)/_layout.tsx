@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlowTabIcon } from '@/components/GlowTabIcon';
 import Colors from '@/constants/Colors';
@@ -10,19 +11,33 @@ import { radius, shadow } from '@/constants/theme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
+      safeAreaInsets={{ bottom: 0, top: 0, left: 0, right: 0 }}
       screenOptions={{
         tabBarActiveTintColor: palette.tint,
         tabBarInactiveTintColor: palette.tabIconDefault,
         tabBarShowLabel: false,
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingVertical: 0,
+          height: 58,
+        },
+        tabBarIconStyle: {
+          marginTop: 0,
+          marginBottom: 0,
+        },
         tabBarStyle: {
           position: 'absolute',
           left: 48,
           right: 48,
-          bottom: 24,
+          bottom: Math.max(insets.bottom, 8),
           height: 58,
+          paddingTop: 0,
+          paddingBottom: 0,
           borderRadius: radius.pill,
           borderTopWidth: 0,
           borderWidth: 1,
@@ -35,7 +50,6 @@ export default function TabLayout() {
           Platform.OS === 'ios' ? (
             <BlurView intensity={36} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
-        // Always hide native headers — Screen component owns the title chrome.
         headerShown: false,
       }}>
       <Tabs.Screen

@@ -4,6 +4,7 @@ import GlassCard from '@/components/GlassCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { openFocusSettings } from '@/lib/focus';
 import { isExpoGo } from '@/lib/platform';
 import { lockScreenSettingsHint } from '@/lib/notification-permissions';
 import { typography } from '@/constants/theme';
@@ -23,12 +24,19 @@ export default function SilenceLimitationsCard() {
         {isExpoGo()
           ? 'Expo Go cannot flip the physical silent switch. QuietRoutine shows when you should be quiet.'
           : Platform.OS === 'ios'
-            ? 'Apple does not let apps mute the ringer. Use Silent mode or a Focus yourself.'
+            ? 'Apple does not let apps mute the ringer. Use Silent mode or a Focus yourself — QuietRoutine can open Focus settings for you.'
             : 'Automatic ringer control needs a production build with extra permissions.'}
       </Text>
-      <Pressable onPress={() => Linking.openSettings()}>
+      <Pressable
+        onPress={() => {
+          if (Platform.OS === 'ios') {
+            openFocusSettings().catch(console.error);
+            return;
+          }
+          Linking.openSettings().catch(console.error);
+        }}>
         <Text style={[styles.link, { color: palette.tint }]}>
-          Open {Platform.OS === 'ios' ? 'Focus / Do Not Disturb' : 'phone'} settings
+          {Platform.OS === 'ios' ? 'Open Focus settings' : 'Open phone settings'}
         </Text>
       </Pressable>
     </GlassCard>

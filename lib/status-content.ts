@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { SilenceReason, SilenceState } from './types';
 
 export function buildSilenceMessage(reason: SilenceReason | null): string {
@@ -15,9 +17,12 @@ export function buildSilenceMessage(reason: SilenceReason | null): string {
 export function buildStatusContent(state: SilenceState): { title: string; body: string } {
   if (state.isSilenced) {
     const detail = buildSilenceMessage(state.reason);
-    const body = state.until
+    let body = state.until
       ? `${detail} · until ${new Date(state.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
       : detail;
+    if (Platform.OS === 'ios') {
+      body = `${body} · Open Focus to mute the ringer`;
+    }
     return { title: 'Phone is silenced', body };
   }
 

@@ -23,7 +23,6 @@ import {
   fetchUpcomingCalendarEvents,
   requestCalendarPermissions,
 } from '@/lib/calendar';
-import { todayParts } from '@/lib/calendar-ui';
 import { getEffectiveEndTime } from '@/lib/schedule';
 import { createId, parseTimeToMinutes, todayIsoDate } from '@/lib/time';
 import { spacing, typography } from '@/constants/theme';
@@ -47,6 +46,7 @@ export default function ScheduleScreen() {
   const [customReminder, setCustomReminder] = useState('');
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventPreview[]>([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showGoogleImport, setShowGoogleImport] = useState(false);
 
@@ -68,19 +68,34 @@ export default function ScheduleScreen() {
 
   const loadCalendarEvents = async () => {
     setLoadingCalendar(true);
-    const granted = await requestCalendarPermissions();
-    if (!granted) {
-      Alert.alert('Calendar access needed', 'Allow calendar access to import Google Calendar events.');
+    setCalendarError(null);
+    try {
+      const granted = await requestCalendarPermissions();
+      if (!granted) {
+        Alert.alert('Calendar access needed', 'Allow calendar access to import Google Calendar events.');
+        setCalendarError('Calendar permission was denied.');
+        return;
+      }
+      const events = await fetchUpcomingCalendarEvents();
+      setCalendarEvents(events);
+      if (events.length === 0) {
+        setCalendarError('No upcoming events found on this device.');
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Something went wrong while reading your calendar.';
+      setCalendarError(message);
+      setCalendarEvents([]);
+      Alert.alert('Calendar error', message);
+    } finally {
       setLoadingCalendar(false);
-      return;
     }
-    const events = await fetchUpcomingCalendarEvents();
-    setCalendarEvents(events);
-    setLoadingCalendar(false);
   };
 
   useEffect(() => {
-    loadCalendarEvents().catch(console.error);
+    loadCalendarEvents().catch(() => {
+      // Errors are surfaced inside loadCalendarEvents.
+    });
   }, []);
 
   const addMeeting = async () => {
@@ -163,6 +178,18 @@ export default function ScheduleScreen() {
                 endTime={getEffectiveEndTime(meeting)}
                 enabled={meeting.enabled}
                 onToggle={(value) => toggleMeeting(meeting.id, value)}
+                onLongPress={() => {
+                  Alert.alert('Delete event', `Remove “${meeting.title}”?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () => {
+                        removeMeeting(meeting.id).catch(console.error);
+                      },
+                    },
+                  ]);
+                }}
               />
             ))
           )}
@@ -209,6 +236,9 @@ export default function ScheduleScreen() {
           {showGoogleImport ? (
             <>
               <Text style={[styles.empty, { color: palette.muted }]}>{describeCalendarAccess()}</Text>
+              {calendarError ? (
+                <Text style={[styles.empty, { color: palette.danger }]}>{calendarError}</Text>
+              ) : null}
               <Button
                 title={loadingCalendar ? 'Loading...' : 'Import events'}
                 variant="secondary"

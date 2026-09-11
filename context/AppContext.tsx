@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 
 import PermissionsGate from '@/components/PermissionsGate';
+import { openFocusSettings } from '@/lib/focus';
 import { checkCurrentLocationZones, syncGeofencing } from '@/lib/geofencing';
 import { setupReminderChannel, syncEventReminders } from '@/lib/reminders';
 import {
@@ -45,6 +47,10 @@ type AppContextValue = {
   setSilence: (silence: SilenceState) => Promise<void>;
   acknowledgePermissions: () => Promise<void>;
   toggleManualSilence: () => Promise<void>;
+  /** Arm/disarm a zone mute (works even when you are not inside it). */
+  toggleZoneMute: (zoneId: string) => Promise<void>;
+  deleteZone: (zoneId: string) => Promise<void>;
+  moveZone: (zoneId: string, center: { latitude: number; longitude: number }) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -158,6 +164,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as {
+        type?: string;
+        action?: string;
+      };
+      if (data?.action === 'open-focus' || data?.type === 'alarm') {
+        openFocusSettings().catch(console.error);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   const setZones = useCallback(async (zones: SilentZone[]) => {
     const next = await updateZones(zones);
     setData(next);
@@ -205,6 +224,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, [data.silence, setSilence]);
 
+  const toggleZoneMute = useCallback(
+    async (zoneId: string) => {
+      const zone = data.zones.find((item) => item.id === zoneId);
+      if (!zone) return;
+
+      const nextEnabled = !zone.enabled;
+      const nextZones = data.zones.map((item) =>
+        item.id === zoneId ? { ...item, enabled: nextEnabled } : item
+      );
+      await setZones(nextZones);
+
+      if (!nextEnabled) {
+        if (data.silence.reason?.type === 'zone' && data.silence.reason.zoneId === zoneId) {
+          await setSilence(buildSilenceState(false, null));
+        }
+        return;
+      }
+
+      // Mute from anywhere — apply this zone's silence even if you are not inside it.
+      await setSilence(
+        buildSilenceState(true, {
+          type: 'zone',
+          zoneName: zone.name,
+          zoneId: zone.id,
+        })
+      );
+    },
+    [data.silence.reason, data.zones, setSilence, setZones]
+  );
+
+  const deleteZone = useCallback(
+    async (zoneId: string) => {
+      const nextZones = data.zones.filter((zone) => zone.id !== zoneId);
+      await setZones(nextZones);
+      if (data.silence.reason?.type === 'zone' && data.silence.reason.zoneId === zoneId) {
+        await setSilence(buildSilenceState(false, null));
+      }
+    },
+    [data.silence.reason, data.zones, setSilence, setZones]
+  );
+
+  const moveZone = useCallback(
+    async (zoneId: string, center: { latitude: number; longitude: number }) => {
+      const nextZones = data.zones.map((zone) =>
+        zone.id === zoneId
+          ? {
+              ...zone,
+              latitude: center.latitude,
+              longitude: center.longitude,
+            }
+          : zone
+      );
+      await setZones(nextZones);
+    },
+    [data.zones, setZones]
+  );
+
   const value = useMemo(
     () => ({
       data,
@@ -216,6 +292,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSilence,
       acknowledgePermissions,
       toggleManualSilence,
+      toggleZoneMute,
+      deleteZone,
+      moveZone,
     }),
     [
       data,
@@ -227,6 +306,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSilence,
       acknowledgePermissions,
       toggleManualSilence,
+      toggleZoneMute,
+      deleteZone,
+      moveZone,
     ]
   );
 
