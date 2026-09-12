@@ -15,13 +15,24 @@ export function buildSilenceMessage(reason: SilenceReason | null): string {
 }
 
 export function buildStatusContent(state: SilenceState): { title: string; body: string } {
+  if (state.pausedUntil && new Date(state.pausedUntil).getTime() > Date.now()) {
+    const untilLabel = new Date(state.pausedUntil).toLocaleTimeString([], {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return {
+      title: 'Silence paused',
+      body: `Do Not Disturb stays off until ${untilLabel}. Zones and schedule will apply again after that.`,
+    };
+  }
+
   if (state.isSilenced) {
     const detail = buildSilenceMessage(state.reason);
     let body = state.until
       ? `${detail} · until ${new Date(state.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
       : detail;
     if (Platform.OS === 'ios') {
-      body = `${body} · QuietRoutine can turn on Focus / Do Not Disturb when linked`;
+      body = `${body} · Focus / Do Not Disturb follows QuietRoutine when linked`;
     }
     return { title: 'Phone is silenced', body };
   }

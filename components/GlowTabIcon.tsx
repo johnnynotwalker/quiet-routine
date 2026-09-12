@@ -60,10 +60,11 @@ export function HeaderIconButton({
 
 const styles = StyleSheet.create({
   wrap: {
-    width: 44,
-    height: 36,
+    width: 40,
+    height: 28,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 0,
   },
   glow: {
     position: 'absolute',

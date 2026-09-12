@@ -7,13 +7,13 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { radius, shadow } from '@/constants/theme';
 
-const TAB_HEIGHT = 44;
+const TAB_HEIGHT = 40;
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom - 4, 6);
+  const bottomPad = Math.max(insets.bottom - 2, 8);
 
   return (
     <Tabs
@@ -24,10 +24,10 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarItemStyle: {
           flex: 1,
-          justifyContent: 'center',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           paddingTop: 0,
-          paddingBottom: 0,
+          paddingBottom: 2,
           height: TAB_HEIGHT,
         },
         tabBarIconStyle: {

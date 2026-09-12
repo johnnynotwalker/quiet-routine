@@ -133,12 +133,39 @@ export async function applySilenceState(state: SilenceState): Promise<void> {
 export function buildSilenceState(
   isSilenced: boolean,
   reason: SilenceReason | null,
-  until: string | null = null
+  until: string | null = null,
+  pausedUntil: string | null = null
 ): SilenceState {
   return {
     isSilenced,
     reason,
     until,
     updatedAt: new Date().toISOString(),
+    pausedUntil,
   };
+}
+
+export function isSilencePaused(state: SilenceState, now = new Date()): boolean {
+  if (!state.pausedUntil) return false;
+  return new Date(state.pausedUntil).getTime() > now.getTime();
+}
+
+export function pauseSilenceFor(minutes = 30): SilenceState {
+  const until = new Date();
+  until.setMinutes(until.getMinutes() + minutes);
+  return buildSilenceState(false, null, null, until.toISOString());
+}
+
+export function clearSilencePause(state: SilenceState): SilenceState {
+  if (!state.pausedUntil) return state;
+  return { ...state, pausedUntil: null, updatedAt: new Date().toISOString() };
+}
+
+export function formatPauseRemaining(pausedUntil: string, now = new Date()): string {
+  const ms = Math.max(0, new Date(pausedUntil).getTime() - now.getTime());
+  const totalSeconds = Math.ceil(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds}s`;
+  return `${minutes}m ${`${seconds}`.padStart(2, '0')}s`;
 }

@@ -37,7 +37,7 @@ function mergeAppData(parsed: Partial<AppData> | null): AppData {
     zones: (parsed?.zones ?? []).map(normalizeZone),
     routines: parsed?.routines ?? [],
     schedule: (parsed?.schedule ?? []).map(normalizeMeeting),
-    silence: parsed?.silence ?? DEFAULT_SILENCE,
+    silence: { ...DEFAULT_SILENCE, ...(parsed?.silence ?? {}) },
     settings: { ...DEFAULT_SETTINGS, ...parsed?.settings },
   };
 }

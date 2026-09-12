@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { supportsBackgroundLocation } from './platform';
 import { haversineDistanceMeters, isPointInPolygon } from './polygon';
 import { loadAppData, updateSilence } from './storage';
-import { applySilenceState, buildSilenceState } from './silence';
+import { applySilenceState, buildSilenceState, isSilencePaused } from './silence';
 import { LatLng, SilentZone } from './types';
 
 export const GEOFENCE_TASK = 'QUIETROUTINE_GEOFENCE';
@@ -24,6 +24,10 @@ function isInsideZone(zone: SilentZone, point: LatLng): boolean {
 
 async function applyZoneSilence(zone: SilentZone): Promise<void> {
   const appData = await loadAppData();
+  // Honor a user pause — do not remute while countdown is active, even in a new zone.
+  if (isSilencePaused(appData.silence)) {
+    return;
+  }
   if (
     appData.silence.isSilenced &&
     appData.silence.reason?.type === 'zone' &&

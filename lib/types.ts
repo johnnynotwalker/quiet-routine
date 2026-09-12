@@ -50,6 +50,8 @@ export type SilenceState = {
   reason: SilenceReason | null;
   until: string | null;
   updatedAt: string;
+  /** When set, zones/schedule must not re-mute until this time. */
+  pausedUntil: string | null;
 };
 
 export type AppSettings = {
@@ -78,6 +80,7 @@ export const DEFAULT_SILENCE: SilenceState = {
   reason: null,
   until: null,
   updatedAt: new Date().toISOString(),
+  pausedUntil: null,
 };
 
 export const DEFAULT_APP_DATA: AppData = {

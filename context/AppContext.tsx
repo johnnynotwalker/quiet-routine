@@ -14,8 +14,11 @@ import {
 import {
   applySilenceState,
   buildSilenceState,
+  clearSilencePause,
   ensureNotificationPermissions,
   ensureStatusNotification,
+  isSilencePaused,
+  pauseSilenceFor,
   setupNotificationChannel,
 } from '@/lib/silence';
 import {
@@ -56,7 +59,24 @@ type AppContextValue = {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+async function clearExpiredPauseIfNeeded(data: AppData): Promise<AppData> {
+  if (!data.silence.pausedUntil) return data;
+  if (isSilencePaused(data.silence)) return data;
+
+  const nextSilence = clearSilencePause(data.silence);
+  const next = { ...data, silence: nextSilence };
+  await saveAppData(next);
+  return next;
+}
+
 async function evaluateScheduledSilence(data: AppData): Promise<AppData> {
+  data = await clearExpiredPauseIfNeeded(data);
+
+  // While paused, do not apply schedule mute — home countdown owns this window.
+  if (isSilencePaused(data.silence)) {
+    return data;
+  }
+
   const activeMeeting = getActiveMeeting(data.schedule);
   const zoneSilenced = data.silence.reason?.type === 'zone' && data.silence.isSilenced;
   const manualSilenced = data.silence.reason?.type === 'manual' && data.silence.isSilenced;
@@ -69,7 +89,8 @@ async function evaluateScheduledSilence(data: AppData): Promise<AppData> {
     const nextSilence = buildSilenceState(
       true,
       meetingSilenceReason(activeMeeting),
-      meetingEndIso(activeMeeting)
+      meetingEndIso(activeMeeting),
+      null
     );
 
     if (
@@ -225,9 +246,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data.settings, data.silence.isSilenced]);
 
+  const pauseSilence = useCallback(async () => {
+    const nextSilence = pauseSilenceFor(30);
+    await setSilence(nextSilence);
+  }, [setSilence]);
+
+  const resumeFromPause = useCallback(async () => {
+    const cleared = clearSilencePause(data.silence);
+    const next = await updateSilence(cleared);
+    const evaluated = await evaluateScheduledSilence(next);
+    setData(evaluated);
+    await checkCurrentLocationZones();
+    await applySilenceState(evaluated.silence);
+  }, [data.silence]);
+
   const toggleManualSilence = useCallback(async () => {
-    if (data.silence.isSilenced && data.silence.reason?.type === 'manual') {
-      await setSilence(buildSilenceState(false, null));
+    // If currently silenced (zone / meeting / manual), pause for 30 minutes and turn DND off.
+    if (data.silence.isSilenced) {
+      await pauseSilence();
+      return;
+    }
+
+    // If already in a pause countdown, resume early and re-apply zone/schedule.
+    if (isSilencePaused(data.silence)) {
+      await resumeFromPause();
       return;
     }
 
@@ -237,7 +279,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         label: 'Manual silence',
       })
     );
-  }, [data.silence, setSilence]);
+  }, [data.silence, pauseSilence, resumeFromPause, setSilence]);
 
   const toggleZoneMute = useCallback(
     async (zoneId: string) => {
@@ -308,6 +350,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       acknowledgePermissions,
       setFocusBridgeLinked,
       toggleManualSilence,
+      pauseSilence,
+      resumeFromPause,
       toggleZoneMute,
       deleteZone,
       moveZone,
@@ -323,6 +367,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       acknowledgePermissions,
       setFocusBridgeLinked,
       toggleManualSilence,
+      pauseSilence,
+      resumeFromPause,
       toggleZoneMute,
       deleteZone,
       moveZone,

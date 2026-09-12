@@ -1,5 +1,5 @@
 import { Volume2, VolumeX } from 'lucide-react-native';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import Button from '@/components/Button';
 import GlassCard from '@/components/GlassCard';
@@ -15,7 +15,8 @@ type Props = {
   timeRange?: string;
   onPrimaryAction: () => void;
   primaryLabel: string;
-  onFocusAction?: () => void;
+  /** When silence is paused, show this countdown detail. */
+  pauseDetail?: string | null;
 };
 
 export default function StatusHeroCard({
@@ -24,13 +25,15 @@ export default function StatusHeroCard({
   timeRange,
   onPrimaryAction,
   primaryLabel,
-  onFocusAction,
+  pauseDetail,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const paused = Boolean(pauseDetail);
   const Icon = silence.isSilenced ? VolumeX : Volume2;
 
   const detail = (() => {
+    if (paused) return pauseDetail!;
     if (!silence.isSilenced || !silence.reason) return 'Tap below when you need quiet focus';
     switch (silence.reason.type) {
       case 'zone': {
@@ -44,23 +47,24 @@ export default function StatusHeroCard({
     }
   })();
 
+  const title = paused
+    ? 'Silence paused'
+    : silence.isSilenced
+      ? 'Currently Silenced'
+      : 'Not Silenced';
+
   return (
-    <GlassCard highlighted={silence.isSilenced} contentStyle={styles.card}>
+    <GlassCard highlighted={silence.isSilenced || paused} contentStyle={styles.card}>
       <View style={styles.top}>
         <View style={[styles.iconBubble, { backgroundColor: palette.iceTint }]}>
           <Icon size={26} color={palette.tint} strokeWidth={1.75} />
         </View>
         <View style={styles.text}>
-          <Text style={[styles.title, { color: palette.text }]}>
-            {silence.isSilenced ? 'Currently Silenced' : 'Not Silenced'}
-          </Text>
+          <Text style={[styles.title, { color: palette.text }]}>{title}</Text>
           <Text style={[styles.detail, { color: palette.muted }]}>{detail}</Text>
         </View>
       </View>
       <Button title={primaryLabel} onPress={onPrimaryAction} style={styles.cta} />
-      {Platform.OS === 'ios' && onFocusAction ? (
-        <Button title="Turn on Do Not Disturb now" variant="secondary" onPress={onFocusAction} />
-      ) : null}
     </GlassCard>
   );
 }

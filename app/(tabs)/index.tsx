@@ -11,7 +11,6 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
-import { enableSystemSilenceNow } from '@/lib/system-silence';
 import {
   canShowOnLockScreen,
   getStatusNotificationPermissions,
@@ -19,6 +18,7 @@ import {
   lockScreenSettingsHint,
 } from '@/lib/notification-permissions';
 import { getActiveMeeting, getEffectiveEndTime } from '@/lib/schedule';
+import { formatPauseRemaining, isSilencePaused } from '@/lib/silence';
 import { formatTimeLabel, todayIsoDate } from '@/lib/time';
 
 function formatNowClock(now: Date): string {
@@ -54,10 +54,12 @@ export default function HomeScreen() {
     return () => subscription.remove();
   }, []);
 
+  const paused = isSilencePaused(data.silence, now);
+
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 30_000);
+    const interval = setInterval(() => setNow(new Date()), paused ? 1_000 : 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [paused]);
 
   const activeMeeting = getActiveMeeting(data.schedule);
   const today = todayIsoDate();
@@ -89,7 +91,15 @@ export default function HomeScreen() {
     return undefined;
   }, [activeMeeting, data.silence.until]);
 
-  const primaryLabel = data.silence.isSilenced ? 'Pause Silence (30m)' : 'Start Silence Mode';
+  const pauseDetail = paused && data.silence.pausedUntil
+    ? `Do Not Disturb stays off · ${formatPauseRemaining(data.silence.pausedUntil, now)} left`
+    : null;
+
+  const primaryLabel = paused
+    ? 'Resume silence now'
+    : data.silence.isSilenced
+      ? 'Pause Silence (30m)'
+      : 'Start Silence Mode';
 
   return (
     <Screen
@@ -105,9 +115,7 @@ export default function HomeScreen() {
           timeRange={silenceTimeRange}
           primaryLabel={primaryLabel}
           onPrimaryAction={toggleManualSilence}
-          onFocusAction={() => {
-            enableSystemSilenceNow().catch(console.error);
-          }}
+          pauseDetail={pauseDetail}
         />
 
         <SilenceLimitationsCard />
