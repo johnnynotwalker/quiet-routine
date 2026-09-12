@@ -10,7 +10,7 @@ A mobile app that keeps your phone silenced in the right places and at the right
 - Small zones use live GPS; larger zones use background geofencing
 
 ### Calendar-based silence
-- **Google Calendar** — import events from calendars synced on your device (Google on Android, or Google added in iOS Settings)
+- **Google Calendar** — import events only from Google accounts synced on the device (not the local phone calendar). Add Google in system Calendar settings first.
 - **Built-in calendar** — create events with start/end times and dates
 - **Custom end time** — silence can end at the calendar end or a time you choose
 - **Reminders** — notification 30 minutes before (or 5m, 15m, 60m, or a custom value)
@@ -51,7 +51,7 @@ On first launch, QuietRoutine asks for:
 
 1. **Location (including background)** — detect silent zones and live position on the map
 2. **Notifications** — always-on silence status and event reminders
-3. **Calendar (optional)** — import Google Calendar or device calendar events
+3. **Calendar (optional)** — add a Google account in phone Calendar settings, then import from Google Calendar
 
 ## Platform notes
 
