@@ -48,7 +48,7 @@ type AppContextValue = {
   setRoutines: (routines: RoutineItem[]) => Promise<void>;
   setSchedule: (schedule: ScheduledSilence[]) => Promise<void>;
   setSilence: (silence: SilenceState) => Promise<void>;
-  acknowledgePermissions: () => Promise<void>;
+  acknowledgePermissions: (options?: { focusBridgeLinked?: boolean }) => Promise<void>;
   setFocusBridgeLinked: (linked: boolean) => Promise<void>;
   toggleManualSilence: () => Promise<void>;
   /** Arm/disarm a zone mute (works even when you are not inside it). */
@@ -223,14 +223,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await applySilenceState(silence);
   }, []);
 
-  const acknowledgePermissions = useCallback(async () => {
-    const settings: AppSettings = {
-      ...data.settings,
-      permissionsAcknowledged: true,
-    };
-    const next = await updateSettings(settings);
-    setData(next);
-  }, [data.settings]);
+  const acknowledgePermissions = useCallback(
+    async (options?: { focusBridgeLinked?: boolean }) => {
+      const settings: AppSettings = {
+        ...data.settings,
+        permissionsAcknowledged: true,
+        focusBridgeLinked:
+          options?.focusBridgeLinked === true ? true : data.settings.focusBridgeLinked,
+      };
+      const next = await updateSettings(settings);
+      setData(next);
+    },
+    [data.settings]
+  );
 
   const setFocusBridgeLinked = useCallback(async (linked: boolean) => {
     const settings: AppSettings = {

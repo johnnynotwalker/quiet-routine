@@ -61,16 +61,17 @@ export function HeaderIconButton({
 const styles = StyleSheet.create({
   wrap: {
     width: 40,
-    height: 28,
+    height: 40,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 0,
+    justifyContent: 'center',
   },
   glow: {
     position: 'absolute',
     width: 32,
     height: 32,
     borderRadius: 16,
+    top: 4,
+    left: 4,
   },
   iconBtn: {
     width: 44,

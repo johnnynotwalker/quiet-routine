@@ -13,6 +13,7 @@ type Props = {
   zone: SilentZone;
   active: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
 };
 
 function zoneIcon(name: string) {
@@ -22,7 +23,7 @@ function zoneIcon(name: string) {
   return MapPinned;
 }
 
-export default function ZoneTile({ zone, active, onPress }: Props) {
+export default function ZoneTile({ zone, active, onPress, onLongPress }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const Icon = zoneIcon(zone.name);
@@ -33,6 +34,10 @@ export default function ZoneTile({ zone, active, onPress }: Props) {
       onPress={() => {
         tapHaptic().catch(() => undefined);
         onPress?.();
+      }}
+      onLongPress={() => {
+        tapHaptic().catch(() => undefined);
+        onLongPress?.();
       }}>
       <GlassCard compact highlighted={active} contentStyle={styles.card}>
         <View

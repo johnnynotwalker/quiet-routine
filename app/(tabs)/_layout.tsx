@@ -24,10 +24,10 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarItemStyle: {
           flex: 1,
-          justifyContent: 'flex-end',
+          justifyContent: 'center',
           alignItems: 'center',
           paddingTop: 0,
-          paddingBottom: 2,
+          paddingBottom: 0,
           height: TAB_HEIGHT,
         },
         tabBarIconStyle: {

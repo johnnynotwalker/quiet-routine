@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import Button from '@/components/Button';
@@ -10,6 +10,8 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { describeCalendarAccess, requestCalendarPermissions } from '@/lib/calendar';
 import { requestLocationPermissions } from '@/lib/geofencing';
 import { isExpoGo } from '@/lib/platform';
+import { requestAutomaticShortcutsSetup } from '@/lib/shortcuts-setup';
+import { SILENCE_OFF_SHORTCUT, SILENCE_ON_SHORTCUT } from '@/lib/system-silence';
 import { spacing, typography } from '@/constants/theme';
 import {
   canShowOnLockScreen,
@@ -17,11 +19,11 @@ import {
   hasNotificationAccess,
   requestStatusNotificationPermissions,
 } from '@/lib/notification-permissions';
-import { ensureStatusNotification, buildSilenceState } from '@/lib/silence';
+import { buildSilenceState, ensureStatusNotification } from '@/lib/silence';
 
 type Props = {
   visible: boolean;
-  onComplete: () => void;
+  onComplete: (options?: { focusBridgeLinked?: boolean }) => void;
 };
 
 export default function PermissionsGate({ visible, onComplete }: Props) {
@@ -65,11 +67,24 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
   const requestCalendar = async () => {
     const granted = await requestCalendarPermissions();
     setCalendarGranted(granted);
-    onComplete();
+    setStep(3);
   };
 
   const skipCalendar = () => {
-    onComplete();
+    setStep(3);
+  };
+
+  const finishWithShortcuts = async (linkBridge: boolean) => {
+    if (linkBridge && Platform.OS === 'ios') {
+      await requestAutomaticShortcutsSetup();
+      onComplete({ focusBridgeLinked: true });
+      return;
+    }
+    if (linkBridge && Platform.OS === 'android') {
+      onComplete({ focusBridgeLinked: true });
+      return;
+    }
+    onComplete({ focusBridgeLinked: false });
   };
 
   const steps = [
@@ -104,6 +119,18 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
       granted: calendarGranted,
       skip: 'Use built-in calendar only',
       onSkip: skipCalendar,
+    },
+    {
+      title: 'Do Not Disturb shortcuts',
+      body:
+        Platform.OS === 'ios'
+          ? `Allow QuietRoutine to add “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}” so zones and your schedule can turn Do Not Disturb on and off automatically.`
+          : 'Allow QuietRoutine to use Do Not Disturb when a zone or schedule says you should be silent.',
+      action: Platform.OS === 'ios' ? 'Add shortcuts' : 'Enable Do Not Disturb bridge',
+      onPress: () => finishWithShortcuts(true),
+      granted: false,
+      skip: 'Skip for now',
+      onSkip: () => finishWithShortcuts(false),
     },
   ];
 
