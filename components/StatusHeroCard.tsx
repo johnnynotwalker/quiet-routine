@@ -59,7 +59,7 @@ export default function StatusHeroCard({
       </View>
       <Button title={primaryLabel} onPress={onPrimaryAction} style={styles.cta} />
       {Platform.OS === 'ios' && onFocusAction ? (
-        <Button title="Enable Focus on iPhone" variant="secondary" onPress={onFocusAction} />
+        <Button title="Turn on Do Not Disturb now" variant="secondary" onPress={onFocusAction} />
       ) : null}
     </GlassCard>
   );

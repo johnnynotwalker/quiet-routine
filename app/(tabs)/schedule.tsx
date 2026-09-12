@@ -48,12 +48,6 @@ export default function ScheduleScreen() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showGoogleImport, setShowGoogleImport] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setSelectedDate(todayIsoDate());
-    }, [])
-  );
-
   const markedDates = useMemo(() => {
     const dates = new Set<string>();
     for (const item of data.schedule) {

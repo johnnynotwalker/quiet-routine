@@ -46,6 +46,7 @@ type AppContextValue = {
   setSchedule: (schedule: ScheduledSilence[]) => Promise<void>;
   setSilence: (silence: SilenceState) => Promise<void>;
   acknowledgePermissions: () => Promise<void>;
+  setFocusBridgeLinked: (linked: boolean) => Promise<void>;
   toggleManualSilence: () => Promise<void>;
   /** Arm/disarm a zone mute (works even when you are not inside it). */
   toggleZoneMute: (zoneId: string) => Promise<void>;
@@ -210,6 +211,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setData(next);
   }, [data.settings]);
 
+  const setFocusBridgeLinked = useCallback(async (linked: boolean) => {
+    const settings: AppSettings = {
+      ...data.settings,
+      focusBridgeLinked: linked,
+    };
+    const next = await updateSettings(settings);
+    setData(next);
+    if (linked && next.silence.isSilenced) {
+      const { applySystemSilence, resetSystemSilenceCache } = await import('@/lib/system-silence');
+      resetSystemSilenceCache();
+      await applySystemSilence(true, { force: true });
+    }
+  }, [data.settings, data.silence.isSilenced]);
+
   const toggleManualSilence = useCallback(async () => {
     if (data.silence.isSilenced && data.silence.reason?.type === 'manual') {
       await setSilence(buildSilenceState(false, null));
@@ -291,6 +306,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSchedule,
       setSilence,
       acknowledgePermissions,
+      setFocusBridgeLinked,
       toggleManualSilence,
       toggleZoneMute,
       deleteZone,
@@ -305,6 +321,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSchedule,
       setSilence,
       acknowledgePermissions,
+      setFocusBridgeLinked,
       toggleManualSilence,
       toggleZoneMute,
       deleteZone,

@@ -56,7 +56,7 @@ On first launch, QuietRoutine asks for:
 ## Platform notes
 
 - **Android** — Full geofencing, GPS zones, calendar import, and persistent notifications.
-- **iOS** — Geofencing and notifications work. Third-party apps cannot change the system ringer; QuietRoutine shows a persistent reminder and can open **Focus settings** so you can enable system-level silence yourself.
+- **iOS** — Apple does not let third-party apps set Focus/DND directly (Focus schedules work because Focus *is* iOS). QuietRoutine decides when you should be silent from zones + calendar, then drives real Do Not Disturb by running linked Focus Shortcuts (`QuietRoutine On` / `QuietRoutine Off`).
 
 ## Project structure
 

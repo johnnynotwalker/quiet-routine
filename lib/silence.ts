@@ -8,6 +8,7 @@ import {
   requestStatusNotificationPermissions,
 } from './notification-permissions';
 import { buildStatusContent } from './status-content';
+import { applySystemSilence } from './system-silence';
 import { SilenceReason, SilenceState } from './types';
 
 export const STATUS_NOTIFICATION_ID = 'quietroutine-status';
@@ -125,6 +126,8 @@ export async function dismissStatusNotification(): Promise<void> {
 
 export async function applySilenceState(state: SilenceState): Promise<void> {
   await ensureStatusNotification(state);
+  // Drive real Focus / DND when the user linked the Focus bridge.
+  await applySystemSilence(state.isSilenced);
 }
 
 export function buildSilenceState(

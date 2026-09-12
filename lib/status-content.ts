@@ -21,7 +21,7 @@ export function buildStatusContent(state: SilenceState): { title: string; body: 
       ? `${detail} · until ${new Date(state.until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
       : detail;
     if (Platform.OS === 'ios') {
-      body = `${body} · Open Focus to mute the ringer`;
+      body = `${body} · QuietRoutine can turn on Focus / Do Not Disturb when linked`;
     }
     return { title: 'Phone is silenced', body };
   }

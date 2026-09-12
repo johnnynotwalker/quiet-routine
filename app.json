@@ -18,6 +18,11 @@
         "UIBackgroundModes": [
           "location",
           "fetch"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "shortcuts",
+          "App-prefs",
+          "prefs"
         ]
       }
     },

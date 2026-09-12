@@ -55,6 +55,8 @@ export type SilenceState = {
 export type AppSettings = {
   permissionsAcknowledged: boolean;
   defaultReminderMinutes: number;
+  /** When true, QuietRoutine runs Focus shortcuts to toggle real Do Not Disturb. */
+  focusBridgeLinked: boolean;
 };
 
 export type AppData = {
@@ -68,6 +70,7 @@ export type AppData = {
 export const DEFAULT_SETTINGS: AppSettings = {
   permissionsAcknowledged: false,
   defaultReminderMinutes: 30,
+  focusBridgeLinked: false,
 };
 
 export const DEFAULT_SILENCE: SilenceState = {

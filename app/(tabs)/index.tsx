@@ -4,13 +4,14 @@ import { AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeaderIconButton } from '@/components/GlowTabIcon';
 import Screen from '@/components/Screen';
+import SilenceLimitationsCard from '@/components/SilenceLimitationsCard';
 import StatusHeroCard from '@/components/StatusHeroCard';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
-import { openFocusSettings } from '@/lib/focus';
+import { enableSystemSilenceNow } from '@/lib/system-silence';
 import {
   canShowOnLockScreen,
   getStatusNotificationPermissions,
@@ -105,9 +106,11 @@ export default function HomeScreen() {
           primaryLabel={primaryLabel}
           onPrimaryAction={toggleManualSilence}
           onFocusAction={() => {
-            openFocusSettings().catch(console.error);
+            enableSystemSilenceNow().catch(console.error);
           }}
         />
+
+        <SilenceLimitationsCard />
 
         <View style={styles.nextBlock}>
           <Text style={[styles.nextTitle, { color: palette.text }]}>
