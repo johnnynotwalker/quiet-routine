@@ -20,11 +20,22 @@ import {
 import { getActiveMeeting, getEffectiveEndTime } from '@/lib/schedule';
 import { formatTimeLabel, todayIsoDate } from '@/lib/time';
 
+function formatNowClock(now: Date): string {
+  const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const date = now.toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+  return `It's now ${time} · ${date}`;
+}
+
 export default function HomeScreen() {
   const { data, toggleManualSilence } = useApp();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const [lockScreenReady, setLockScreenReady] = useState(false);
+  const [now, setNow] = useState(() => new Date());
 
   const refreshPermissionState = async () => {
     const settings = await getStatusNotificationPermissions();
@@ -34,13 +45,22 @@ export default function HomeScreen() {
   useEffect(() => {
     refreshPermissionState().catch(console.error);
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refreshPermissionState().catch(console.error);
+      if (state === 'active') {
+        setNow(new Date());
+        refreshPermissionState().catch(console.error);
+      }
     });
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const activeMeeting = getActiveMeeting(data.schedule);
   const today = todayIsoDate();
+  const nowSubtitle = formatNowClock(now);
   const nextEvent = useMemo(() => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -73,7 +93,8 @@ export default function HomeScreen() {
   return (
     <Screen
       variant="greeting"
-      greeting="Hello, Alex"
+      greeting="Welcome back"
+      subtitle={nowSubtitle}
       title=""
       action={<HeaderIconButton icon={Bell} onPress={() => Linking.openSettings()} />}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

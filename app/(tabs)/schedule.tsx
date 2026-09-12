@@ -34,7 +34,7 @@ export default function ScheduleScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
-  const [selectedDate, setSelectedDate] = useState(todayIsoDate());
+  const [selectedDate, setSelectedDate] = useState(() => todayIsoDate());
   const [title, setTitle] = useState('');
   const [startTime, setStartTime] = useState('11:00');
   const [endTime, setEndTime] = useState('12:00');
@@ -47,6 +47,12 @@ export default function ScheduleScreen() {
   const [calendarHint, setCalendarHint] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showGoogleImport, setShowGoogleImport] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedDate(todayIsoDate());
+    }, [])
+  );
 
   const markedDates = useMemo(() => {
     const dates = new Set<string>();

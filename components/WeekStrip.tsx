@@ -50,24 +50,40 @@ function DayPill({
   palette: ThemeColors;
   onPress: () => void;
 }) {
+  const isToday = day.isToday;
+
   return (
     <Pressable onPress={onPress} style={styles.pillWrap}>
       <View
         style={[
           styles.pill,
           selected
-            ? { backgroundColor: palette.iceTint, borderColor: palette.tint }
-            : { backgroundColor: palette.card, borderColor: palette.border },
+            ? { backgroundColor: palette.iceTint, borderColor: palette.tint, borderWidth: 2 }
+            : isToday
+              ? { backgroundColor: palette.card, borderColor: palette.tint, borderWidth: 2 }
+              : { backgroundColor: palette.card, borderColor: palette.border, borderWidth: 1 },
         ]}>
-        <Text style={[styles.weekday, { color: selected ? palette.tintDeep : palette.muted }]}>
-          {day.weekday}
+        <Text
+          style={[
+            styles.weekday,
+            { color: selected || isToday ? palette.tintDeep : palette.muted },
+          ]}>
+          {isToday ? 'Today' : day.weekday}
         </Text>
-        <Text style={[styles.dayNum, { color: selected ? palette.text : palette.text }]}>
-          {day.day}
-        </Text>
+        <Text style={[styles.dayNum, { color: palette.text }]}>{day.day}</Text>
       </View>
-      {selected || marked ? (
-        <View style={[styles.dot, { backgroundColor: selected ? palette.tint : palette.muted }]} />
+      {selected || marked || isToday ? (
+        <View
+          style={[
+            styles.dot,
+            {
+              backgroundColor: selected || isToday ? palette.tint : palette.muted,
+              width: isToday && !selected ? 6 : 5,
+              height: isToday && !selected ? 6 : 5,
+              borderRadius: isToday && !selected ? 3 : 3,
+            },
+          ]}
+        />
       ) : (
         <View style={styles.dotSpacer} />
       )}
@@ -88,7 +104,6 @@ const styles = StyleSheet.create({
     width: 56,
     paddingVertical: spacing.md,
     borderRadius: radius.pill,
-    borderWidth: 1,
     alignItems: 'center',
     gap: 2,
   },

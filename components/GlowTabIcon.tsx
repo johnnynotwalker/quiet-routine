@@ -29,7 +29,7 @@ export function GlowTabIcon({ name, color, focused }: Props) {
       {focused ? (
         <View style={[styles.glow, { backgroundColor: palette.iceTint }, shadow.glow]} />
       ) : null}
-      <Icon size={24} color={typeof color === 'string' ? color : palette.tint} strokeWidth={1.75} />
+      <Icon size={22} color={typeof color === 'string' ? color : palette.tint} strokeWidth={1.75} />
     </View>
   );
 }
@@ -60,16 +60,16 @@ export function HeaderIconButton({
 
 const styles = StyleSheet.create({
   wrap: {
-    width: 56,
-    height: 48,
+    width: 44,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   glow: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   iconBtn: {
     width: 44,

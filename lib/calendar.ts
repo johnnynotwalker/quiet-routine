@@ -1,10 +1,10 @@
 import {
   EntityTypes,
-  getCalendarPermissions,
-  getCalendars,
-  listEvents,
-  requestCalendarPermissions as requestExpoCalendarPermissions,
-} from 'expo-calendar';
+  getCalendarPermissionsAsync,
+  getCalendarsAsync,
+  getEventsAsync,
+  requestCalendarPermissionsAsync,
+} from 'expo-calendar/legacy';
 import { Platform } from 'react-native';
 
 import { ScheduledSilence } from './types';
@@ -38,13 +38,26 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function toDate(value: string | Date): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function friendlyCalendarError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  if (/Calendar@next|not available in Expo Go/i.test(message)) {
+    return 'Calendar needs a rebuild to use the latest API. Fully close Expo Go, reopen this project, and try Import again.';
+  }
+  if (message.trim()) return message;
+  return 'Could not connect to the device calendar. Fully close Expo Go and try again.';
+}
+
 export async function requestCalendarAccess(): Promise<boolean> {
   try {
-    const existing = await getCalendarPermissions();
+    const existing = await getCalendarPermissionsAsync();
     if (existing.granted || existing.status === 'granted') {
       return true;
     }
-    const requested = await requestExpoCalendarPermissions();
+    const requested = await requestCalendarPermissionsAsync();
     return requested.granted || requested.status === 'granted';
   } catch (error) {
     console.error('Calendar permission request failed', error);
@@ -67,7 +80,8 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
       };
     }
 
-    const calendars = await getCalendars(EntityTypes.EVENT);
+    // Legacy API works in Expo Go; the Calendar@next APIs do not.
+    const calendars = await getCalendarsAsync(EntityTypes.EVENT);
     if (calendars.length === 0) {
       return {
         events: [],
@@ -84,7 +98,11 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
     const end = new Date(start);
     end.setDate(end.getDate() + daysAhead);
 
-    const events = await listEvents(calendars, start, end);
+    const events = await getEventsAsync(
+      calendars.map((calendar) => calendar.id),
+      start,
+      end
+    );
 
     const mapped: CalendarEventPreview[] = events
       .filter((event) => !event.allDay)
@@ -93,8 +111,8 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
         return {
           externalId: String(event.id),
           title: event.title || 'Untitled event',
-          startDate: new Date(event.startDate),
-          endDate: new Date(event.endDate),
+          startDate: toDate(event.startDate),
+          endDate: toDate(event.endDate),
           calendarTitle: calendar?.title ?? calendar?.source?.name ?? 'Calendar',
         };
       })
@@ -110,10 +128,7 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
     return {
       events: [],
       permissionGranted: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'Could not connect to the device calendar. Fully close Expo Go and try again.',
+      error: friendlyCalendarError(error),
     };
   }
 }

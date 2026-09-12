@@ -7,13 +7,13 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { radius, shadow } from '@/constants/theme';
 
-const TAB_HEIGHT = 58;
+const TAB_HEIGHT = 44;
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const palette = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, 10);
+  const bottomPad = Math.max(insets.bottom - 4, 6);
 
   return (
     <Tabs
