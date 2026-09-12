@@ -4,6 +4,7 @@ import {
   getCalendarsAsync,
   getEventsAsync,
   requestCalendarPermissionsAsync,
+  type Calendar,
 } from 'expo-calendar/legacy';
 import { Platform } from 'react-native';
 
@@ -16,6 +17,9 @@ export type CalendarEventPreview = {
   startDate: Date;
   endDate: Date;
   calendarTitle: string;
+  /** Account / source label, e.g. Gmail address. */
+  accountName: string;
+  isGoogle: boolean;
 };
 
 export type CalendarLoadResult = {
@@ -23,6 +27,8 @@ export type CalendarLoadResult = {
   /** null when connected successfully (even if there are zero events). */
   error: string | null;
   permissionGranted: boolean;
+  googleCalendarCount: number;
+  googleAccountNames: string[];
 };
 
 function formatTime(date: Date): string {
@@ -48,7 +54,79 @@ function friendlyCalendarError(error: unknown): string {
     return 'Calendar needs a rebuild to use the latest API. Fully close Expo Go, reopen this project, and try Import again.';
   }
   if (message.trim()) return message;
-  return 'Could not connect to the device calendar. Fully close Expo Go and try again.';
+  return 'Could not connect to Google Calendar. Fully close Expo Go and try again.';
+}
+
+function looksLikeEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+/** Detect Google-synced calendars (not the phone’s local calendar). */
+export function isGoogleCalendar(calendar: Calendar): boolean {
+  const sourceName = String(calendar.source?.name ?? '').toLowerCase();
+  const sourceType = String(calendar.source?.type ?? '').toLowerCase();
+  const title = String(calendar.title ?? '').toLowerCase();
+  const owner = String(calendar.ownerAccount ?? '').toLowerCase();
+  const androidName = String(calendar.name ?? '').toLowerCase();
+  const haystack = `${sourceName} ${sourceType} ${title} ${owner} ${androidName}`;
+
+  // Never treat the phone-local account as Google.
+  if (calendar.source?.isLocalAccount) return false;
+  if (sourceType === 'local' || sourceType === 'birthdays') return false;
+
+  // Android Google account provider.
+  if (sourceType.includes('google') || sourceType === 'com.google') return true;
+  if (owner.includes('google') || owner.includes('gmail') || owner.includes('googlemail')) return true;
+
+  // Common Google / Gmail markers on both platforms.
+  if (
+    haystack.includes('google') ||
+    haystack.includes('gmail') ||
+    haystack.includes('googlemail') ||
+    haystack.includes('@gmail.') ||
+    haystack.includes('@googlemail.')
+  ) {
+    return true;
+  }
+
+  // iOS Google accounts often arrive as CalDAV with the Gmail address as the source name.
+  if (
+    (sourceType === 'caldav' || sourceType.includes('caldav')) &&
+    (looksLikeEmail(sourceName) || looksLikeEmail(owner) || looksLikeEmail(title))
+  ) {
+    // Exclude Apple iCloud and common non-Google CalDAV providers.
+    if (
+      haystack.includes('icloud') ||
+      haystack.includes('me.com') ||
+      haystack.includes('mac.com') ||
+      haystack.includes('outlook') ||
+      haystack.includes('hotmail') ||
+      haystack.includes('live.com') ||
+      haystack.includes('office365') ||
+      haystack.includes('exchange') ||
+      haystack.includes('yahoo')
+    ) {
+      return false;
+    }
+    // Prefer Gmail / Google Workspace markers; still accept generic CalDAV+email
+    // because Google on iOS often only exposes the address as the source name.
+    return true;
+  }
+
+  return false;
+}
+
+function googleAccountLabel(calendar: Calendar): string {
+  const candidates = [
+    calendar.ownerAccount,
+    calendar.source?.name,
+    calendar.title,
+  ].filter((value): value is string => Boolean(value && String(value).trim()));
+
+  const email = candidates.find((value) => looksLikeEmail(value.trim()));
+  if (email) return email.trim();
+  if (calendar.source?.name?.trim()) return calendar.source.name.trim();
+  return calendar.title?.trim() || 'Google Calendar';
 }
 
 export async function requestCalendarAccess(): Promise<boolean> {
@@ -65,7 +143,22 @@ export async function requestCalendarAccess(): Promise<boolean> {
   }
 }
 
-/** Preferred UI helper — empty calendars are success, not a connection failure. */
+function noGoogleCalendarError(totalCalendars: number): string {
+  if (Platform.OS === 'ios') {
+    return totalCalendars > 0
+      ? 'Your phone calendars are available, but no Google Calendar account was found. Add Google in iPhone Settings → Calendar → Accounts → Add Account → Google, turn Calendars on, wait for sync, then tap Import again.'
+      : 'No Google Calendar found. Add Google in iPhone Settings → Calendar → Accounts → Add Account → Google, enable Calendars, then try Import again.';
+  }
+
+  return totalCalendars > 0
+    ? 'Device calendars were found, but not a Google account. Add your Google account in phone Settings → Passwords & accounts / Users & accounts, enable Calendar sync, then tap Import again.'
+    : 'No Google Calendar found. Add your Google account in phone Settings and enable Calendar sync, then try Import again.';
+}
+
+/**
+ * Loads upcoming events from Google Calendar accounts synced on the device.
+ * Local-only phone calendars are ignored so Import does not pretend to be Google.
+ */
 export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<CalendarLoadResult> {
   try {
     const granted = await requestCalendarAccess();
@@ -73,6 +166,8 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
       return {
         events: [],
         permissionGranted: false,
+        googleCalendarCount: 0,
+        googleAccountNames: [],
         error:
           Platform.OS === 'ios'
             ? 'Calendar access is off. Enable it in iPhone Settings → QuietRoutine → Calendars, then tap Import again.'
@@ -80,18 +175,23 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
       };
     }
 
-    // Legacy API works in Expo Go; the Calendar@next APIs do not.
+    // Legacy API works in Expo Go; Calendar@next does not.
     const calendars = await getCalendarsAsync(EntityTypes.EVENT);
-    if (calendars.length === 0) {
+    const googleCalendars = calendars.filter(isGoogleCalendar);
+
+    if (googleCalendars.length === 0) {
       return {
         events: [],
         permissionGranted: true,
-        error:
-          Platform.OS === 'ios'
-            ? 'No calendars found. Add Google Calendar in iPhone Settings → Calendar → Accounts, then try again.'
-            : 'No calendars found. Add a Google account in system Settings, then try again.',
+        googleCalendarCount: 0,
+        googleAccountNames: [],
+        error: noGoogleCalendarError(calendars.length),
       };
     }
+
+    const googleAccountNames = Array.from(
+      new Set(googleCalendars.map((calendar) => googleAccountLabel(calendar)))
+    );
 
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -99,7 +199,7 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
     end.setDate(end.getDate() + daysAhead);
 
     const events = await getEventsAsync(
-      calendars.map((calendar) => calendar.id),
+      googleCalendars.map((calendar) => calendar.id),
       start,
       end
     );
@@ -107,13 +207,15 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
     const mapped: CalendarEventPreview[] = events
       .filter((event) => !event.allDay)
       .map((event) => {
-        const calendar = calendars.find((item) => item.id === event.calendarId);
+        const calendar = googleCalendars.find((item) => item.id === event.calendarId);
         return {
           externalId: String(event.id),
           title: event.title || 'Untitled event',
           startDate: toDate(event.startDate),
           endDate: toDate(event.endDate),
-          calendarTitle: calendar?.title ?? calendar?.source?.name ?? 'Calendar',
+          calendarTitle: calendar?.title ?? 'Google Calendar',
+          accountName: calendar ? googleAccountLabel(calendar) : 'Google Calendar',
+          isGoogle: true,
         };
       })
       .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
@@ -121,13 +223,17 @@ export async function loadUpcomingCalendarEvents(daysAhead = 14): Promise<Calend
     return {
       events: mapped,
       permissionGranted: true,
+      googleCalendarCount: googleCalendars.length,
+      googleAccountNames,
       error: null,
     };
   } catch (error) {
-    console.error('Failed to fetch calendar events', error);
+    console.error('Failed to fetch Google Calendar events', error);
     return {
       events: [],
       permissionGranted: false,
+      googleCalendarCount: 0,
+      googleAccountNames: [],
       error: friendlyCalendarError(error),
     };
   }
@@ -161,10 +267,10 @@ export function calendarEventToScheduledSilence(
 
 export function describeCalendarAccess(): string {
   if (Platform.OS === 'android') {
-    return 'Imports events from Google Calendar and other calendars synced on this phone.';
+    return 'Imports only from Google Calendar accounts synced on this phone — not the local device calendar. Add Google in Settings and turn Calendar sync on.';
   }
 
-  return 'Imports events from calendars synced on this iPhone (including Google Calendar if added in Settings → Calendar → Accounts).';
+  return 'Imports only from Google Calendar accounts synced on this iPhone — not the local iPhone calendar. Add Google in Settings → Calendar → Accounts, then enable Calendars.';
 }
 
 /** Back-compat alias */

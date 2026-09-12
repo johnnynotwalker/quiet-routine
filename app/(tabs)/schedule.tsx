@@ -77,9 +77,21 @@ export default function ScheduleScreen() {
       return;
     }
 
+    const accounts =
+      result.googleAccountNames.length > 0
+        ? result.googleAccountNames.join(', ')
+        : 'Google Calendar';
+
     if (result.events.length === 0) {
-      setCalendarHint('Connected — no upcoming events in the next 2 weeks.');
+      setCalendarHint(
+        `Connected to ${accounts} (${result.googleCalendarCount} calendar${result.googleCalendarCount === 1 ? '' : 's'}) — no upcoming events in the next 2 weeks.`
+      );
+      return;
     }
+
+    setCalendarHint(
+      `Connected to ${accounts} · ${result.events.length} Google event${result.events.length === 1 ? '' : 's'} found.`
+    );
   };
 
   const addMeeting = async () => {
@@ -237,7 +249,7 @@ export default function ScheduleScreen() {
                 <Text style={[styles.empty, { color: palette.success }]}>{calendarHint}</Text>
               ) : null}
               <Button
-                title={loadingCalendar ? 'Connecting...' : 'Import events'}
+                title={loadingCalendar ? 'Connecting to Google…' : 'Import from Google Calendar'}
                 variant="secondary"
                 onPress={loadCalendarEvents}
                 disabled={loadingCalendar}
@@ -253,7 +265,8 @@ export default function ScheduleScreen() {
                         hour: 'numeric',
                         minute: '2-digit',
                       })}
-                      {event.calendarTitle ? ` · ${event.calendarTitle}` : ''}
+                      {` · ${event.calendarTitle}`}
+                      {event.accountName ? ` · ${event.accountName}` : ''}
                     </Text>
                   </View>
                   <Button title="Add" onPress={() => importCalendarEvent(event)} />
