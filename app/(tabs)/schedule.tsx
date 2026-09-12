@@ -18,6 +18,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useApp } from '@/context/AppContext';
 import {
   CalendarEventPreview,
+  DeviceCalendarInfo,
   calendarEventToScheduledSilence,
   describeCalendarAccess,
   loadUpcomingCalendarEvents,
@@ -30,7 +31,7 @@ import { ScheduledSilence } from '@/lib/types';
 const REMINDER_PRESETS = [0, 5, 15, 30, 60];
 
 export default function ScheduleScreen() {
-  const { data, setSchedule } = useApp();
+  const { data, setSchedule, setGoogleCalendarIds } = useApp();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
@@ -47,6 +48,10 @@ export default function ScheduleScreen() {
   const [calendarHint, setCalendarHint] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showGoogleImport, setShowGoogleImport] = useState(false);
+  const [selectableCalendars, setSelectableCalendars] = useState<DeviceCalendarInfo[]>([]);
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>(
+    () => data.settings.googleCalendarIds ?? []
+  );
 
   const markedDates = useMemo(() => {
     const dates = new Set<string>();
@@ -64,12 +69,17 @@ export default function ScheduleScreen() {
     [data.schedule, selectedDate]
   );
 
-  const loadCalendarEvents = async () => {
+  const loadCalendarEvents = async (calendarIds?: string[]) => {
     setLoadingCalendar(true);
     setCalendarError(null);
     setCalendarHint(null);
-    const result = await loadUpcomingCalendarEvents();
+
+    const preferredIds = calendarIds ?? selectedCalendarIds;
+    const result = await loadUpcomingCalendarEvents({
+      preferredCalendarIds: preferredIds,
+    });
     setCalendarEvents(result.events);
+    setSelectableCalendars(result.selectableCalendars);
     setLoadingCalendar(false);
 
     if (result.error) {
@@ -92,6 +102,14 @@ export default function ScheduleScreen() {
     setCalendarHint(
       `Connected to ${accounts} · ${result.events.length} Google event${result.events.length === 1 ? '' : 's'} found.`
     );
+  };
+
+  const toggleCalendarSelection = async (calendarId: string) => {
+    const next = selectedCalendarIds.includes(calendarId)
+      ? selectedCalendarIds.filter((id) => id !== calendarId)
+      : [...selectedCalendarIds, calendarId];
+    setSelectedCalendarIds(next);
+    await setGoogleCalendarIds(next);
   };
 
   const addMeeting = async () => {
@@ -248,10 +266,42 @@ export default function ScheduleScreen() {
               {calendarHint && !calendarError ? (
                 <Text style={[styles.empty, { color: palette.success }]}>{calendarHint}</Text>
               ) : null}
+              {selectableCalendars.length > 0 ? (
+                <View style={styles.calendarPicker}>
+                  <Text style={[styles.switchLabel, { color: palette.text }]}>
+                    Choose Google calendars (never On My iPhone)
+                  </Text>
+                  {selectableCalendars.map((calendar) => {
+                    const selected = selectedCalendarIds.includes(calendar.id);
+                    return (
+                      <Pressable
+                        key={calendar.id}
+                        onPress={() => {
+                          toggleCalendarSelection(calendar.id).catch(console.error);
+                        }}
+                        style={[
+                          styles.calendarOption,
+                          {
+                            borderColor: selected ? palette.tint : palette.border,
+                            backgroundColor: selected ? palette.iceTint : palette.card,
+                          },
+                        ]}>
+                        <Text style={[styles.switchLabel, { color: palette.text }]}>
+                          {calendar.title}
+                          {calendar.kind === 'google' ? ' · Google' : ''}
+                        </Text>
+                        <Text style={[styles.empty, { color: palette.muted }]}>
+                          {calendar.accountName} · {calendar.sourceName}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
               <Button
                 title={loadingCalendar ? 'Connecting to Google…' : 'Import from Google Calendar'}
                 variant="secondary"
-                onPress={loadCalendarEvents}
+                onPress={() => loadCalendarEvents()}
                 disabled={loadingCalendar}
               />
               {calendarEvents.slice(0, 8).map((event) => (
@@ -328,5 +378,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     marginTop: spacing.sm,
+  },
+  calendarPicker: {
+    gap: spacing.sm,
+  },
+  calendarOption: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: 2,
   },
 });

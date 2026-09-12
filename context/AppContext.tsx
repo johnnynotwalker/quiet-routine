@@ -50,6 +50,7 @@ type AppContextValue = {
   setSilence: (silence: SilenceState) => Promise<void>;
   acknowledgePermissions: (options?: { focusBridgeLinked?: boolean }) => Promise<void>;
   setFocusBridgeLinked: (linked: boolean) => Promise<void>;
+  setGoogleCalendarIds: (ids: string[]) => Promise<void>;
   toggleManualSilence: () => Promise<void>;
   /** Arm/disarm a zone mute (works even when you are not inside it). */
   toggleZoneMute: (zoneId: string) => Promise<void>;
@@ -251,6 +252,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data.settings, data.silence.isSilenced]);
 
+  const setGoogleCalendarIds = useCallback(async (ids: string[]) => {
+    const settings: AppSettings = {
+      ...data.settings,
+      googleCalendarIds: ids,
+    };
+    const next = await updateSettings(settings);
+    setData(next);
+  }, [data.settings]);
+
   const pauseSilence = useCallback(async () => {
     const nextSilence = pauseSilenceFor(30);
     await setSilence(nextSilence);
@@ -354,6 +364,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSilence,
       acknowledgePermissions,
       setFocusBridgeLinked,
+      setGoogleCalendarIds,
       toggleManualSilence,
       pauseSilence,
       resumeFromPause,
@@ -371,6 +382,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSilence,
       acknowledgePermissions,
       setFocusBridgeLinked,
+      setGoogleCalendarIds,
       toggleManualSilence,
       pauseSilence,
       resumeFromPause,

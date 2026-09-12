@@ -150,16 +150,28 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View style={styles.nextBlock}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>
-            Next{nextEvent ? `: ${nextEvent.title}` : ''}
+        <View
+          style={[
+            styles.nextBlock,
+            {
+              borderColor: '#7DD3FC',
+              backgroundColor: palette.card,
+            },
+          ]}>
+          <Text style={[styles.nextEyebrow, { color: palette.muted }]}>Next event</Text>
+          <Text style={[styles.nextTitle, { color: palette.text }]}>
+            {nextEvent
+              ? nextEvent.title
+              : activeMeeting
+                ? activeMeeting.title
+                : 'Nothing upcoming'}
           </Text>
           <Text style={[styles.nextMeta, { color: palette.muted }]}>
             {nextEvent
               ? `${formatTimeLabel(nextEvent.startTime)} – ${formatTimeLabel(getEffectiveEndTime(nextEvent))}`
               : activeMeeting
-                ? `Active now: ${activeMeeting.title}`
-                : 'No upcoming events today'}
+                ? 'Active now'
+                : 'No events scheduled for today'}
           </Text>
         </View>
 
@@ -198,12 +210,30 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   nextBlock: {
-    gap: 4,
-    paddingHorizontal: spacing.xs,
+    gap: 6,
+    marginHorizontal: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 1.5,
+    borderRadius: 18,
+    borderColor: '#7DD3FC',
+  },
+  nextEyebrow: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textTransform: 'lowercase',
+  },
+  nextTitle: {
+    ...typography.heading,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   nextMeta: {
     ...typography.body,
-    fontSize: 14,
+    fontSize: 13,
   },
   hint: {
     ...typography.caption,

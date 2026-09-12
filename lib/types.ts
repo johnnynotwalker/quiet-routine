@@ -59,6 +59,8 @@ export type AppSettings = {
   defaultReminderMinutes: number;
   /** When true, QuietRoutine runs Focus shortcuts to toggle real Do Not Disturb. */
   focusBridgeLinked: boolean;
+  /** Calendar IDs the user picked as Google calendars (iPhone EventKit). */
+  googleCalendarIds: string[];
 };
 
 export type AppData = {
@@ -73,6 +75,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   permissionsAcknowledged: false,
   defaultReminderMinutes: 30,
   focusBridgeLinked: false,
+  googleCalendarIds: [],
 };
 
 export const DEFAULT_SILENCE: SilenceState = {
