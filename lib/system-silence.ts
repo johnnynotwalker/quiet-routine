@@ -18,8 +18,9 @@ export async function runNamedShortcut(name: string): Promise<boolean> {
   if (Platform.OS !== 'ios') return false;
 
   const encoded = encodeName(name);
+  // If the shortcut does not exist, Shortcuts calls x-error → QuietRoutine creates both On & Off.
   const urls = [
-    `shortcuts://x-callback-url/run-shortcut?name=${encoded}&x-success=quietroutine://focus-done&x-cancel=quietroutine://`,
+    `shortcuts://x-callback-url/run-shortcut?name=${encoded}&x-success=${encodeURIComponent('quietroutine://focus-done')}&x-cancel=${encodeURIComponent('quietroutine://')}&x-error=${encodeURIComponent('quietroutine://create-shortcuts')}`,
     `shortcuts://run-shortcut?name=${encoded}`,
   ];
 
@@ -74,10 +75,12 @@ export async function applySystemSilence(
 
   if (Platform.OS === 'ios') {
     if (!linked) {
+      // Still create the shortcuts so the user has QuietRoutine On / Off ready to link.
+      await ensureSilenceShortcutsExist();
       return {
         applied: false,
         mode: 'skipped',
-        message: 'Link Focus once so QuietRoutine can turn Do Not Disturb on and off for you.',
+        message: 'QuietRoutine On / Off are being created in Shortcuts — link Focus on Home, then silence will work.',
       };
     }
 
@@ -94,12 +97,12 @@ export async function applySystemSilence(
       };
     }
 
-    // Shortcut missing or Shortcuts failed — create it automatically.
-    await ensureSilenceShortcutsExist(name);
+    // Shortcut missing or Shortcuts failed — create QuietRoutine On & Off automatically.
+    await ensureSilenceShortcutsExist();
     return {
       applied: false,
       mode: 'settings',
-      message: `“${name}” was missing — QuietRoutine opened Shortcuts to create it.`,
+      message: `QuietRoutine On / Off was missing — opened Shortcuts to create both.`,
     };
   }
 

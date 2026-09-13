@@ -5,10 +5,12 @@ import { useFonts } from 'expo-font';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Linking } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AppProvider } from '@/context/AppContext';
+import { handleShortcutDeepLink } from '@/lib/shortcuts-setup';
 
 export {
   ErrorBoundary,
@@ -34,6 +36,22 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // When Shortcuts reports a missing QuietRoutine On/Off shortcut, create both automatically.
+  useEffect(() => {
+    const onUrl = ({ url }: { url: string }) => {
+      handleShortcutDeepLink(url);
+    };
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) handleShortcutDeepLink(url);
+      })
+      .catch(() => undefined);
+
+    const subscription = Linking.addEventListener('url', onUrl);
+    return () => subscription.remove();
+  }, []);
 
   if (!loaded) {
     return null;

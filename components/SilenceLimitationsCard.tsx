@@ -95,6 +95,15 @@ export default function SilenceLimitationsCard() {
                 }}
               />
               <Button
+                title="Create QuietRoutine On & Off"
+                variant="secondary"
+                onPress={() => {
+                  import('@/lib/shortcuts-setup')
+                    .then(({ createQuietRoutineShortcuts }) => createQuietRoutineShortcuts())
+                    .catch(console.error);
+                }}
+              />
+              <Button
                 title="Mute incoming calls setup"
                 variant="secondary"
                 onPress={() => {
