@@ -53,6 +53,9 @@ export default function ScheduleScreen() {
     () => data.settings.googleCalendarIds ?? []
   );
 
+  const todayIso = todayIsoDate();
+  const isPastSelected = selectedDate < todayIso;
+
   const markedDates = useMemo(() => {
     const dates = new Set<string>();
     for (const item of data.schedule) {
@@ -113,6 +116,10 @@ export default function ScheduleScreen() {
   };
 
   const addMeeting = async () => {
+    if (selectedDate < todayIsoDate()) {
+      Alert.alert('Past day', 'You can only add schedule events for today or future days.');
+      return;
+    }
     if (!title.trim()) {
       Alert.alert('Missing title', 'Name this event or focus block.');
       return;
@@ -145,14 +152,18 @@ export default function ScheduleScreen() {
   };
 
   const importCalendarEvent = async (event: CalendarEventPreview) => {
+    const meetingPreview = calendarEventToScheduledSilence(event, data.settings.defaultReminderMinutes);
+    if (meetingPreview.date && meetingPreview.date < todayIsoDate()) {
+      Alert.alert('Past day', 'You can only add schedule events for today or future days.');
+      return;
+    }
     const alreadyImported = data.schedule.some((item) => item.externalId === event.externalId);
     if (alreadyImported) {
       Alert.alert('Already added', 'This calendar event is already in your schedule.');
       return;
     }
-    const meeting = calendarEventToScheduledSilence(event, data.settings.defaultReminderMinutes);
-    await setSchedule([...data.schedule, meeting]);
-    if (meeting.date) setSelectedDate(meeting.date);
+    await setSchedule([...data.schedule, meetingPreview]);
+    if (meetingPreview.date) setSelectedDate(meetingPreview.date);
   };
 
   const toggleMeeting = async (meetingId: string, enabled: boolean) => {
@@ -171,7 +182,30 @@ export default function ScheduleScreen() {
       action={
         <HeaderIconButton
           icon={showAddForm ? X : Plus}
-          onPress={() => setShowAddForm((value) => !value)}
+          onPress={() => {
+            if (showAddForm) {
+              setShowAddForm(false);
+              return;
+            }
+            if (selectedDate < todayIsoDate()) {
+              Alert.alert(
+                'Past day',
+                'You can’t add events on past days. Jump to today to schedule something new?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Go to today',
+                    onPress: () => {
+                      setSelectedDate(todayIsoDate());
+                      setShowAddForm(true);
+                    },
+                  },
+                ]
+              );
+              return;
+            }
+            setShowAddForm(true);
+          }}
         />
       }>
       <ScrollView
@@ -181,14 +215,20 @@ export default function ScheduleScreen() {
         <WeekStrip
           selectedDate={selectedDate}
           markedDates={markedDates}
-          onSelectDate={setSelectedDate}
+          onSelectDate={(iso) => {
+            setSelectedDate(iso);
+            if (iso < todayIsoDate()) {
+              setShowAddForm(false);
+            }
+          }}
         />
 
         <View style={styles.list}>
           {eventsForSelectedDay.length === 0 ? (
             <Text style={[styles.empty, { color: palette.muted }]}>
-              No events this day. Tap + to add a focus session.
-            </Text>
+              {isPastSelected
+                ? 'Past days are view-only — you can’t add new events here.'
+                : 'No events this day. Tap + to add a focus session.'}</Text>
           ) : (
             eventsForSelectedDay.map((meeting) => (
               <ScheduleEventRow
@@ -215,7 +255,7 @@ export default function ScheduleScreen() {
           )}
         </View>
 
-        {showAddForm ? (
+        {showAddForm && !isPastSelected ? (
           <GlassCard contentStyle={styles.form}>
             <Text style={[styles.formTitle, { color: palette.text }]}>New event</Text>
             <FormField

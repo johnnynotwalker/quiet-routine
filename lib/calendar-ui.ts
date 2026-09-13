@@ -31,6 +31,8 @@ export type WeekDay = {
   weekday: string;
   day: number;
   isToday: boolean;
+  /** True when the day is before today — schedule adds are not allowed. */
+  isPast: boolean;
 };
 
 export function buildWeekStrip(centerIso: string, span = 14): WeekDay[] {
@@ -49,6 +51,7 @@ export function buildWeekStrip(centerIso: string, span = 14): WeekDay[] {
       weekday: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 3),
       day: date.getDate(),
       isToday: iso === todayIso,
+      isPast: iso < todayIso,
     });
   }
 

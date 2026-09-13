@@ -1,5 +1,6 @@
 import { Linking, Platform } from 'react-native';
 
+import { ensureSilenceShortcutsExist } from './shortcuts-setup';
 import { loadAppData } from './storage';
 
 /** Shortcut names the user creates once in the Shortcuts app. */
@@ -93,16 +94,12 @@ export async function applySystemSilence(
       };
     }
 
-    try {
-      await Linking.openURL('App-prefs:FOCUS');
-    } catch {
-      await Linking.openSettings();
-    }
-    lastApplied = enabled;
+    // Shortcut missing or Shortcuts failed — create it automatically.
+    await ensureSilenceShortcutsExist(name);
     return {
-      applied: true,
+      applied: false,
       mode: 'settings',
-      message: 'Could not run Shortcuts — opened Focus settings instead.',
+      message: `“${name}” was missing — QuietRoutine opened Shortcuts to create it.`,
     };
   }
 

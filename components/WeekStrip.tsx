@@ -51,9 +51,10 @@ function DayPill({
   onPress: () => void;
 }) {
   const isToday = day.isToday;
+  const isPast = day.isPast;
 
   return (
-    <Pressable onPress={onPress} style={styles.pillWrap}>
+    <Pressable onPress={onPress} style={[styles.pillWrap, isPast && { opacity: 0.45 }]}>
       <View
         style={[
           styles.pill,
@@ -70,7 +71,7 @@ function DayPill({
           ]}>
           {isToday ? 'Today' : day.weekday}
         </Text>
-        <Text style={[styles.dayNum, { color: palette.text }]}>{day.day}</Text>
+        <Text style={[styles.dayNum, { color: isPast ? palette.muted : palette.text }]}>{day.day}</Text>
       </View>
       {selected || marked || isToday ? (
         <View

@@ -10,6 +10,7 @@ import { typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { openFocusSettings } from '@/lib/focus';
 import { lockScreenSettingsHint } from '@/lib/notification-permissions';
+import { requestAutomaticShortcutsSetup } from '@/lib/shortcuts-setup';
 import {
   SILENCE_OFF_SHORTCUT,
   SILENCE_ON_SHORTCUT,
@@ -32,6 +33,9 @@ export default function SilenceLimitationsCard() {
   const linkBridge = async () => {
     setBusy(true);
     try {
+      if (Platform.OS === 'ios') {
+        await requestAutomaticShortcutsSetup();
+      }
       await setFocusBridgeLinked(true);
       if (data.silence.isSilenced) {
         await applySystemSilence(true, { force: true });
@@ -59,14 +63,14 @@ export default function SilenceLimitationsCard() {
         {!linked ? (
           <View style={styles.steps}>
             <Text style={[styles.step, { color: palette.text }]}>
-              1. Shortcuts → + → Add Action → Set Focus → Do Not Disturb → Turn On. Name it “
-              {SILENCE_ON_SHORTCUT}”.
+              1. Tap the button below — QuietRoutine opens Shortcuts and creates “
+              {SILENCE_ON_SHORTCUT}” and “{SILENCE_OFF_SHORTCUT}” for you.
             </Text>
             <Text style={[styles.step, { color: palette.text }]}>
-              2. Make another shortcut that turns Do Not Disturb Off. Name it “{SILENCE_OFF_SHORTCUT}”.
+              2. On each sheet, add Set Focus → Do Not Disturb (On / Off) and save.
             </Text>
             <Text style={[styles.step, { color: palette.text }]}>
-              3. Tap Link below. QuietRoutine handles the rest from your zones and calendar.
+              3. QuietRoutine runs them from your zones and calendar after that.
             </Text>
           </View>
         ) : (
@@ -78,7 +82,7 @@ export default function SilenceLimitationsCard() {
           {!linked ? (
             <>
               <Button title="Open Shortcuts" variant="secondary" onPress={() => { openShortcutsApp().catch(console.error); }} />
-              <Button title={busy ? 'Linking…' : 'I’ve created them — Link Focus'} onPress={linkBridge} />
+              <Button title={busy ? 'Linking…' : 'Create shortcuts & link Focus'} onPress={linkBridge} />
             </>
           ) : (
             <>
