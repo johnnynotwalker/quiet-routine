@@ -42,7 +42,7 @@ export default function SilenceLimitationsCard() {
       }
       Alert.alert(
         'Focus linked',
-        `QuietRoutine will run “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}” when your zones or schedule change.`
+        `QuietRoutine will run “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}” for zones and schedule — including muted incoming calls when Do Not Disturb allows calls from Nobody.`
       );
     } finally {
       setBusy(false);
@@ -56,26 +56,27 @@ export default function SilenceLimitationsCard() {
           {linked ? 'Do Not Disturb linked' : 'Make silence real with Focus'}
         </Text>
         <Text style={[styles.body, { color: palette.muted }]}>
-          Focus can mute your iPhone on a schedule because it is built into iOS. Third-party apps
-          are not allowed to flip Focus directly — QuietRoutine does the next best thing: when your
-          calendar, zones, or schedule say “silence,” it runs your Focus Shortcuts automatically.
+          Focus can mute notifications and incoming calls because it is built into iOS. Apps cannot
+          flip Focus themselves — QuietRoutine runs your Focus Shortcuts when a zone or schedule
+          says silence.
         </Text>
         {!linked ? (
           <View style={styles.steps}>
             <Text style={[styles.step, { color: palette.text }]}>
-              1. Tap the button below — QuietRoutine opens Shortcuts and creates “
-              {SILENCE_ON_SHORTCUT}” and “{SILENCE_OFF_SHORTCUT}” for you.
+              1. Tap below — QuietRoutine creates “{SILENCE_ON_SHORTCUT}” and “{SILENCE_OFF_SHORTCUT}”.
             </Text>
             <Text style={[styles.step, { color: palette.text }]}>
-              2. On each sheet, add Set Focus → Do Not Disturb (On / Off) and save.
+              2. On each sheet: Set Focus → Do Not Disturb (On / Off) and save.
             </Text>
             <Text style={[styles.step, { color: palette.text }]}>
-              3. QuietRoutine runs them from your zones and calendar after that.
+              3. In Focus → Do Not Disturb → People, set Allow Calls From to Nobody so incoming
+              calls stay muted too.
             </Text>
           </View>
         ) : (
           <Text style={[styles.body, { color: palette.muted }]}>
-            Linked. Entering a mute zone or a scheduled event turns Focus on; leaving turns it off.
+            Linked. Zones and schedule turn Focus on (muting notifications and calls) and off when
+            you leave.
           </Text>
         )}
         <View style={styles.actions}>
@@ -87,10 +88,19 @@ export default function SilenceLimitationsCard() {
           ) : (
             <>
               <Button
-                title="Test Do Not Disturb on"
+                title="Test mute (DND + calls)"
                 variant="secondary"
                 onPress={() => {
                   applySystemSilence(true, { force: true }).catch(console.error);
+                }}
+              />
+              <Button
+                title="Mute incoming calls setup"
+                variant="secondary"
+                onPress={() => {
+                  import('@/lib/shortcuts-setup')
+                    .then(({ ensureIncomingCallsMuted }) => ensureIncomingCallsMuted())
+                    .catch(console.error);
                 }}
               />
               <Pressable onPress={() => setFocusBridgeLinked(false)}>

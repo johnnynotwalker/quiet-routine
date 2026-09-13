@@ -89,7 +89,7 @@ export async function applySystemSilence(
         applied: true,
         mode: 'shortcut',
         message: enabled
-          ? 'Turning on Do Not Disturb via Focus…'
+          ? 'Turning on Do Not Disturb via Focus (notifications + calls)…'
           : 'Turning off Do Not Disturb via Focus…',
       };
     }

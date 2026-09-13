@@ -121,12 +121,12 @@ export default function PermissionsGate({ visible, onComplete }: Props) {
       onSkip: skipCalendar,
     },
     {
-      title: 'Do Not Disturb shortcuts',
+      title: 'Do Not Disturb + mute calls',
       body:
         Platform.OS === 'ios'
-          ? `Allow QuietRoutine to add “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}” so zones and your schedule can turn Do Not Disturb on and off automatically.`
-          : 'Allow QuietRoutine to use Do Not Disturb when a zone or schedule says you should be silent.',
-      action: Platform.OS === 'ios' ? 'Add shortcuts' : 'Enable Do Not Disturb bridge',
+          ? `Allow QuietRoutine to add “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}”, then set Focus → Do Not Disturb → People → Allow Calls From → Nobody so silence also mutes incoming calls.`
+          : 'Allow QuietRoutine to use Do Not Disturb when a zone or schedule says you should be silent — including muting calls.',
+      action: Platform.OS === 'ios' ? 'Add shortcuts & mute calls' : 'Enable Do Not Disturb bridge',
       onPress: () => finishWithShortcuts(true),
       granted: false,
       skip: 'Skip for now',

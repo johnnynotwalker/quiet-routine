@@ -1,5 +1,6 @@
 import { Alert, Linking, Platform } from 'react-native';
 
+import { openFocusSettings } from './focus';
 import { SILENCE_OFF_SHORTCUT, SILENCE_ON_SHORTCUT, openShortcutsApp } from './system-silence';
 
 function delay(ms: number): Promise<void> {
@@ -24,9 +25,30 @@ async function openCreateShortcut(name: string): Promise<boolean> {
 }
 
 /**
- * Automatically opens the iOS Shortcuts create flow for QuietRoutine On and Off.
- * Apple does not allow silent injection of Shortcuts — the OS create sheet is the
- * most automatic path available. User only needs to add “Set Focus” and save.
+ * Opens Focus settings and explains how to mute incoming calls under Do Not Disturb.
+ * Apps cannot reject cellular calls directly — Focus “Allow Calls From: Nobody” does it.
+ */
+export async function ensureIncomingCallsMuted(): Promise<void> {
+  if (Platform.OS !== 'ios') {
+    await Linking.openSettings();
+    Alert.alert(
+      'Mute incoming calls',
+      'Turn on Do Not Disturb (or Total silence) so QuietRoutine can mute calls while you are silenced.'
+    );
+    return;
+  }
+
+  await openFocusSettings();
+  Alert.alert(
+    'Mute incoming calls',
+    'In Focus → Do Not Disturb → People:\n• Allow Calls From → Nobody\n• Turn off Allow Repeated Calls\n\nThen QuietRoutine’s On shortcut mutes notifications and incoming calls together.',
+    [{ text: 'Done' }]
+  );
+}
+
+/**
+ * Automatically opens the iOS Shortcuts create flow for QuietRoutine On and Off,
+ * then opens Focus settings so incoming calls are silenced with DND.
  */
 export async function requestAutomaticShortcutsSetup(): Promise<boolean> {
   if (Platform.OS !== 'ios') {
@@ -43,19 +65,26 @@ export async function requestAutomaticShortcutsSetup(): Promise<boolean> {
     return false;
   }
 
-  // Open the Off shortcut create sheet next so both exist without a second tap in-app.
   await delay(1600);
   const openedOff = await openCreateShortcut(SILENCE_OFF_SHORTCUT);
   if (!openedOff) {
     await openShortcutsApp();
   }
 
-  Alert.alert(
-    'Shortcuts ready to save',
-    `QuietRoutine opened create sheets for “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}”.\n\nOn each one: Add Action → Set Focus → Do Not Disturb → On/Off → Done.\n\nAfter both are saved, QuietRoutine runs them from your zones and schedule.`,
-    [{ text: 'Done' }]
-  );
+  await new Promise<void>((resolve) => {
+    Alert.alert(
+      'Shortcuts ready — mute calls next',
+      `QuietRoutine opened create sheets for “${SILENCE_ON_SHORTCUT}” and “${SILENCE_OFF_SHORTCUT}”.\n\n1. On each: Add Action → Set Focus → Do Not Disturb → On/Off → Done.\n2. Next, Focus settings open so incoming calls stay muted too.`,
+      [
+        {
+          text: 'Configure call silence',
+          onPress: () => resolve(),
+        },
+      ]
+    );
+  });
 
+  await ensureIncomingCallsMuted();
   return true;
 }
 
@@ -69,7 +98,7 @@ export async function ensureSilenceShortcutsExist(missingName?: string): Promise
     await openCreateShortcut(missingName);
     Alert.alert(
       'Shortcut missing',
-      `“${missingName}” was not found, so QuietRoutine opened Shortcuts to create it. Add Set Focus → Do Not Disturb, then save.`
+      `“${missingName}” was not found, so QuietRoutine opened Shortcuts to create it.\n\nAdd Set Focus → Do Not Disturb, save, and keep Focus → People → Allow Calls From set to Nobody so calls stay muted.`
     );
     return;
   }
